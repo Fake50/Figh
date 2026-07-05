@@ -444,10 +444,59 @@ end
 
 -- Получить SlotId из Slot
 local function getSlotId(slot)
-    if slot and slot.Name then
+    -- Слот может иметь разные структуры, пробуем все варианты
+    
+    -- Вариант 1: SlotId хранится в атрибуте
+    if slot:GetAttribute("SlotId") then
+        return slot:GetAttribute("SlotId")
+    end
+    
+    -- Вариант 2: SlotId в StringValue или подобном
+    local slotIdValue = slot:FindFirstChild("SlotId") or slot:FindFirstChild("slotId") or slot:FindFirstChild("ID")
+    if slotIdValue and slotIdValue:IsA("StringValue") then
+        return slotIdValue.Value
+    end
+    
+    -- Вариант 3: Имя слота содержит полный SlotId (например "Slot_5587_114582")
+    if slot.Name:match("Slot_%d+_%d+") then
         return slot.Name
     end
-    return nil
+    
+    -- Вариант 4: Имя слота это только "Slot_X", ищем Configuration или другие данные
+    for _, child in pairs(slot:GetChildren()) do
+        if child:IsA("Configuration") or child.Name == "Data" or child.Name == "Info" then
+            for _, subChild in pairs(child:GetChildren()) do
+                if subChild.Name:lower():find("slot") and subChild:IsA("StringValue") then
+                    return subChild.Value
+                end
+            end
+        end
+    end
+    
+    -- Вариант 5: Проверяем все StringValue в слоте
+    for _, child in pairs(slot:GetDescendants()) do
+        if child:IsA("StringValue") and child.Value:match("SLOT_%d+_%d+") then
+            return child.Value
+        end
+    end
+    
+    -- Если ничего не нашли, выводим структуру слота для отладки
+    print("⚠️ Не удалось найти SlotId. Структура слота:")
+    print("  Имя:", slot.Name)
+    print("  Дети:")
+    for _, child in pairs(slot:GetChildren()) do
+        print("    -", child.Name, child.ClassName)
+        if child:IsA("StringValue") or child:IsA("IntValue") or child:IsA("NumberValue") then
+            print("      Значение:", child.Value)
+        end
+    end
+    print("  Атрибуты:")
+    for attr, value in pairs(slot:GetAttributes()) do
+        print("    -", attr, "=", value)
+    end
+    
+    -- В крайнем случае возвращаем имя слота
+    return slot.Name
 end
 
 -- Телепорт к позиции
@@ -463,104 +512,137 @@ local function teleportTo(position)
     return true
 end
 
--- Взять предмет из слота
+-- Взять предмет из слота (нажать E на манекене)
 local function takeItem(slotId, slot)
-    print("📥 Пытаюсь взять предмет, SlotId:", slotId)
+    print("📥 Беру предмет из слота, SlotId:", slotId)
     
-    -- Метод 1: Через ProximityPrompt
+    -- Ищем ProximityPrompt в слоте
     local prompt = nil
-    
-    -- Ищем ProximityPrompt в слоте и всех его потомках
     for _, desc in pairs(slot:GetDescendants()) do
         if desc:IsA("ProximityPrompt") and desc.Enabled then
             prompt = desc
-            print("🔘 Найден активный ProximityPrompt")
+            print("🔘 Найден ProximityPrompt:", desc.ObjectText or "нет текста")
             break
         end
     end
     
-    -- Если нашли prompt, активируем его
-    if prompt then
-        local success = pcall(function()
-            if fireproximityprompt then
-                fireproximityprompt(prompt)
-                print("✅ ProximityPrompt активирован через fireproximityprompt")
-            else
-                prompt:InputHoldBegin()
-                task.wait(prompt.HoldDuration or 0.5)
-                prompt:InputHoldEnd()
-                print("✅ ProximityPrompt активирован вручную")
-            end
-        end)
-        
-        if success then
-            task.wait(1) -- Ждем обработки
-        else
-            print("❌ Ошибка активации ProximityPrompt")
-        end
-    else
-        print("⚠️ ProximityPrompt не найден")
+    if not prompt then
+        print("⚠️ ProximityPrompt не найден в слоте!")
+        return false
     end
     
-    -- Метод 2: Прямой вызов RemoteEvent
-    task.wait(0.5)
-    print("📡 Отправляю ShopTake через RemoteEvent...")
-    local success, err = pcall(function()
-        local args = {{
-            action = "ShopTake",
-            slotId = slotId
-        }}
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("MainEvent"):FireServer(unpack(args))
+    -- Активируем ProximityPrompt (симулируем нажатие E)
+    print("⌨️ Нажимаю E на предмете...")
+    local success = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+            print("✅ Нажал E через fireproximityprompt")
+        else
+            -- Симуляция удержания E
+            prompt:InputHoldBegin()
+            task.wait(prompt.HoldDuration or 0.5)
+            prompt:InputHoldEnd()
+            print("✅ Нажал E вручную")
+        end
     end)
     
-    if success then
-        print("✅ ShopTake отправлен")
-    else
-        print("❌ Ошибка ShopTake:", err)
+    if not success then
+        print("❌ Ошибка активации ProximityPrompt")
+        return false
     end
     
-    return success
+    -- Ждем пока предмет добавится в корзину
+    task.wait(1.5)
+    print("✅ Предмет должен быть в корзине")
+    
+    return true
 end
 
--- Оплатить предмет (нажать PAY)
+-- Открыть магазин NPC (нажать E на NPC)
+local function openShopNPC(npc)
+    print("🛒 Открываю магазин NPC...")
+    
+    -- Ищем ProximityPrompt у NPC
+    local prompt = nil
+    for _, desc in pairs(npc.Parent:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") and desc.Enabled then
+            prompt = desc
+            print("🔘 Найден ProximityPrompt у NPC:", desc.ObjectText or "нет текста")
+            break
+        end
+    end
+    
+    if not prompt then
+        print("⚠️ ProximityPrompt не найден у NPC!")
+        return false
+    end
+    
+    -- Активируем ProximityPrompt (симулируем нажатие E)
+    print("⌨️ Нажимаю E на NPC...")
+    local success = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+            print("✅ Нажал E через fireproximityprompt")
+        else
+            prompt:InputHoldBegin()
+            task.wait(prompt.HoldDuration or 0.5)
+            prompt:InputHoldEnd()
+            print("✅ Нажал E вручную")
+        end
+    end)
+    
+    if not success then
+        print("❌ Ошибка активации ProximityPrompt у NPC")
+        return false
+    end
+    
+    -- Ждем пока откроется GUI
+    task.wait(1)
+    print("✅ GUI магазина должен быть открыт")
+    
+    return true
+end
+
+-- Оплатить предмет (нажать PAY в GUI)
 local function purchaseItem(slotId)
-    print("💳 Пытаюсь оплатить предмет, SlotId:", slotId)
+    print("💳 Оплачиваю предмет, SlotId:", slotId)
     
     local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- Ждем немного чтобы GUI точно загрузился
+    task.wait(0.5)
+    
+    -- Ищем кнопку PAY
+    print("🔍 Ищу кнопку PAY в GUI...")
     local payButtonFound = false
     
-    -- Ищем GUI с кнопкой PAY
-    print("🔍 Ищу кнопку PAY в GUI...")
     for _, gui in pairs(playerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
+        if gui:IsA("ScreenGui") and gui.Enabled then
             for _, button in pairs(gui:GetDescendants()) do
-                if button:IsA("TextButton") then
+                if button:IsA("TextButton") and button.Visible then
                     local text = button.Text:upper()
                     local name = button.Name:upper()
                     
-                    if text:find("PAY") or name:find("PAY") or text:find("BUY") or name:find("BUY") or text:find("КУПИТЬ") then
-                        print("💳 Найдена кнопка:", button.Name, "Текст:", button.Text)
+                    if text:find("PAY") or name:find("PAY") then
+                        print("💳 Найдена кнопка PAY:", button.Name, "Текст:", button.Text)
                         payButtonFound = true
                         
-                        -- Симулируем клик через getconnections
-                        local clicked = pcall(function()
+                        -- Нажимаем кнопку через getconnections
+                        pcall(function()
                             if getconnections then
                                 for _, connection in pairs(getconnections(button.MouseButton1Click)) do
                                     connection:Fire()
+                                    print("✅ Нажал PAY через getconnections")
                                 end
                             end
                         end)
                         
-                        if clicked then
-                            print("✅ Кнопка нажата через getconnections")
-                        end
-                        
-                        -- Дополнительно симулируем обычный клик
+                        -- Также пробуем обычный клик
                         pcall(function()
                             button.MouseButton1Click:Fire()
                         end)
                         
-                        task.wait(0.8)
+                        task.wait(0.5)
                         break
                     end
                 end
@@ -569,27 +651,21 @@ local function purchaseItem(slotId)
         end
     end
     
-    if not payButtonFound then
-        print("⚠️ Кнопка PAY не найдена в GUI")
-    end
-    
-    -- Отправляем через RemoteFunction напрямую
+    -- Отправляем RemoteFunction для покупки
     task.wait(0.5)
-    print("📡 Отправляю ShopPurchase через RemoteFunction...")
-    local success, err = pcall(function()
+    print("📡 Вызываю RemoteFunction ShopPurchase...")
+    local success, result = pcall(function()
         local args = {"ShopPurchase", {slotId}}
-        local result = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-        print("📦 Результат покупки:", result)
-        return result
+        return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
     end)
     
     if success then
-        print("✅ ShopPurchase отправлен")
+        print("✅ Покупка выполнена! Результат:", result)
+        return true
     else
-        print("❌ Ошибка ShopPurchase:", err)
+        print("❌ Ошибка покупки:", result)
+        return false
     end
-    
-    return success
 end
 
 -- Купить один предмет
@@ -655,16 +731,17 @@ local function buyItem(mannequinData)
     
     task.wait(1.2) -- Увеличена задержка
     
-    -- Шаг 2: Взять предмет
+    -- Шаг 2: Взять предмет (нажать E)
     print("")
-    print("👕 ШАГ 2: Беру предмет...")
+    print("👕 ШАГ 2: Нажимаю E на предмете...")
     if not takeItem(slotId, slot) then
         autoBuyRunning = false
-        print("❌ Ошибка при взятии предмета")
-        return false, "Ошибка при взятии предмета"
+        print("❌ Не удалось взять предмет")
+        return false, "Не удалось взять предмет"
     end
+    print("✅ Предмет взят и в корзине")
     
-    task.wait(2) -- Увеличена задержка для обработки
+    task.wait(1.5)
     
     -- Шаг 3: Найти NPC
     print("")
@@ -680,7 +757,7 @@ local function buyItem(mannequinData)
     -- Шаг 4: Телепорт к NPC
     print("")
     print("🚀 ШАГ 4: Телепортируюсь к NPC...")
-    local npcTargetPos = npc.Position + Vector3.new(0, 1, 3)
+    local npcTargetPos = npc.Position + Vector3.new(0, 0, 3)
     if not teleportTo(npcTargetPos) then
         autoBuyRunning = false
         print("❌ Ошибка телепорта к NPC")
@@ -690,9 +767,21 @@ local function buyItem(mannequinData)
     
     task.wait(1)
     
-    -- Шаг 5: Оплата
+    -- Шаг 5: Открыть магазин (нажать E на NPC)
     print("")
-    print("💳 ШАГ 5: Оплачиваю...")
+    print("� ШАГ 5: Нажимаю E на NPC...")
+    if not openShopNPC(npc) then
+        autoBuyRunning = false
+        print("❌ Не удалось открыть магазин")
+        return false, "Не удалось открыть магазин"
+    end
+    print("✅ Магазин открыт")
+    
+    task.wait(1)
+    
+    -- Шаг 6: Оплата (нажать PAY)
+    print("")
+    print("💳 ШАГ 6: Нажимаю PAY...")
     if not purchaseItem(slotId) then
         autoBuyRunning = false
         print("❌ Ошибка при оплате")
