@@ -259,6 +259,7 @@ local tracers = {}
 local tracerGui = nil
 local autoBuyEnabled = false
 local autoBuyRunning = false
+local purchasedSlots = {} -- Таблица для отслеживания купленных слотов (по SlotId)
 
 local RARITY_COLOR = Color3.fromRGB(255, 180, 0)
 
@@ -1271,6 +1272,10 @@ local function buyItem(mannequinData)
     
     task.wait(1.0) -- СИЛЬНО увеличенная задержка после оплаты
     
+    -- ДОБАВЛЯЕМ СЛОТ В СПИСОК КУПЛЕННЫХ
+    purchasedSlots[slotId] = true
+    print("📋 Слот", slotId, "добавлен в список купленных")
+    
     -- УДАЛЯЕМ ESP после успешной покупки
     forceRemoveESP(mannequin, "успешно куплено")
     
@@ -1329,6 +1334,30 @@ local function startAutoBuy()
             if not autoBuyEnabled then
                 print("⏸️ Автобай остановлен")
                 break
+            end
+            
+            -- ============================================
+            -- ПРОВЕРКА: УЖЕ КУПИЛИ ЭТОТ СЛОТ?
+            -- ============================================
+            local slotId = getSlotId(item.data.slot)
+            if slotId and purchasedSlots[slotId] then
+                -- Получаем имя вещи
+                local itemNames = {}
+                if item.data.clothingData.shirtId then
+                    local asset = ASSETS[item.data.clothingData.shirtId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                if item.data.clothingData.pantsId then
+                    local asset = ASSETS[item.data.clothingData.pantsId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                local itemName = table.concat(itemNames, " + ")
+                
+                print("⏭️ ПРОПУСК (уже куплено):", itemName)
+                print("   SlotId:", slotId)
+                forceRemoveESP(item.data.mannequin, "уже куплено ранее")
+                task.wait(0.1)
+                continue
             end
             
             -- ============================================
@@ -1446,6 +1475,17 @@ local function stopAutoBuy()
     print("⏹️ Автобай остановлен")
 end
 
+-- Очистить список купленных предметов
+local function clearPurchasedList()
+    local count = 0
+    for _ in pairs(purchasedSlots) do
+        count = count + 1
+    end
+    purchasedSlots = {}
+    print("🗑️ Список купленных очищен! Было:", count)
+    return count
+end
+
 -- ============================================
 -- ПРОСТОЕ GUI (без Rayfield)
 -- ============================================
@@ -1475,7 +1515,7 @@ if not success then
 end
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 250) -- Увеличил высоту для баланса
+frame.Size = UDim2.new(0, 250, 0, 290) -- Увеличил высоту для новой кнопки
 frame.Position = UDim2.new(0.5, -125, 0.1, 0)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 2
@@ -1561,11 +1601,35 @@ autoBuyButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Кнопка очистки списка купленных
+local clearButton = Instance.new("TextButton")
+clearButton.Size = UDim2.new(0.9, 0, 0, 35)
+clearButton.Position = UDim2.new(0.05, 0, 0, 150)
+clearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+clearButton.BorderSizePixel = 1
+clearButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+clearButton.Text = "🗑️ Очистить список"
+clearButton.Font = Enum.Font.SourceSansBold
+clearButton.TextSize = 14
+clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+clearButton.Parent = frame
+
+local clearCorner = Instance.new("UICorner")
+clearCorner.CornerRadius = UDim.new(0, 8)
+clearCorner.Parent = clearButton
+
+clearButton.MouseButton1Click:Connect(function()
+    local count = clearPurchasedList()
+    clearButton.Text = "✅ Очищено: " .. count
+    task.wait(1.5)
+    clearButton.Text = "🗑️ Очистить список"
+end)
+
 local info = Instance.new("TextLabel")
-info.Size = UDim2.new(0.9, 0, 0, 70)
-info.Position = UDim2.new(0.05, 0, 0, 150)
+info.Size = UDim2.new(0.9, 0, 0, 55)
+info.Position = UDim2.new(0.05, 0, 0, 195)
 info.BackgroundTransparency = 1
-info.Text = "✅ Safe Mode\n⚡ Мгновенное E (без задержки)\n� Оптимизация скорости\n🤖 Автобай включен!"
+info.Text = "✅ Safe Mode\n⚡ Мгновенное E (без задержки)\n🚀 Оптимизация скорости\n🤖 Автобай включен!\n📋 Не тепается к купленным"
 info.Font = Enum.Font.SourceSans
 info.TextSize = 12
 info.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -1625,3 +1689,8 @@ print("3. ESP автоматически удалится когда вещь п
 print("")
 print("🎮 GUI в левой верхней части экрана")
 print("Готов к использованию!")
+print("")
+print("🔥 НОВАЯ ФИЧА: Отслеживание купленных предметов!")
+print("   → После покупки предмет добавляется в список")
+print("   → Автобай не тепается к купленным предметам")
+print("   → Кнопка 'Очистить список' сбрасывает купленные")
