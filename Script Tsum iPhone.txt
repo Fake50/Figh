@@ -1,5 +1,5 @@
 -- ============================================
--- 🔥 ESP SAFE MODE - БЕЗ ОБХОДА
+-- 🔥 ESP SAFE MODE - С ОБХОДОМ АНТИЧИТА
 -- ============================================
 -- Этот ESP НЕ использует hookmetamethod
 -- Работает на Delta X без детекта
@@ -8,8 +8,10 @@
 -- ✅ ESP автоматически пропадает если вещь исчезла
 -- ⚡ Мгновенное нажатие E
 -- 🛡️ БЕЗОПАСНЫЕ задержки - защита от античита
--- � Оптимизированные интервалы для стабильной работы
--- � Умная проверка существования предметов
+-- 🚀 Оптимизированные интервалы для стабильной работы
+-- 🔄 Умная проверка существования предметов
+-- 🛸 ПЛАВНЫЙ ТЕЛЕПОРТ - обход детекта телепорта
+-- 📋 Отслеживание купленных предметов
 -- ============================================
 
 print("🔄 Загрузка Safe ESP...")
@@ -894,7 +896,50 @@ local function getSlotId(slot)
     return slot.Name
 end
 
--- Телепорт к позиции
+-- ============================================
+-- БЕЗОПАСНЫЙ ТЕЛЕПОРТ С ОБХОДОМ АНТИЧИТА
+-- ============================================
+-- Вместо мгновенного телепорта используем плавное перемещение
+-- Античит не детектит плавное перемещение как читы
+
+local function smoothTeleport(startPos, endPos, steps, delayBetweenSteps)
+    local character = player.Character
+    if not character then return false end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    -- Вычисляем расстояние и направление
+    local distance = (endPos - startPos).Magnitude
+    
+    -- Если расстояние маленькое, просто телепортируемся
+    if distance < 10 then
+        hrp.CFrame = CFrame.new(endPos)
+        return true
+    end
+    
+    -- Плавное перемещение маленькими шагами
+    for i = 1, steps do
+        local alpha = i / steps
+        local nextPos = startPos:Lerp(endPos, alpha)
+        
+        -- Безопасная установка позиции
+        pcall(function()
+            hrp.CFrame = CFrame.new(nextPos)
+        end)
+        
+        task.wait(delayBetweenSteps)
+    end
+    
+    -- Финальная установка точной позиции
+    pcall(function()
+        hrp.CFrame = CFrame.new(endPos)
+    end)
+    
+    return true
+end
+
+-- Телепорт к позиции (с обходом античита)
 local function teleportTo(position)
     local character = player.Character
     if not character then return false end
@@ -902,8 +947,29 @@ local function teleportTo(position)
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return false end
     
-    hrp.CFrame = CFrame.new(position)
-    task.wait(0.5) -- Еще больше задержка после телепорта для стабильности
+    local currentPos = hrp.Position
+    local distance = (position - currentPos).Magnitude
+    
+    print("📏 Расстояние до цели:", math.floor(distance), "стадов")
+    
+    -- Выбираем метод телепорта в зависимости от расстояния
+    if distance < 15 then
+        -- Близко - обычный телепорт
+        print("🚶 Близко, обычный телепорт")
+        hrp.CFrame = CFrame.new(position)
+        task.wait(0.3)
+    elseif distance < 100 then
+        -- Средняя дистанция - быстрое плавное перемещение
+        print("🏃 Средняя дистанция, быстрое перемещение")
+        smoothTeleport(currentPos, position, 5, 0.05) -- 5 шагов по 0.05с = 0.25с
+        task.wait(0.3)
+    else
+        -- Большая дистанция - более плавное перемещение
+        print("✈️ Большая дистанция, плавное перемещение")
+        smoothTeleport(currentPos, position, 8, 0.08) -- 8 шагов по 0.08с = 0.64с
+        task.wait(0.4)
+    end
+    
     return true
 end
 
@@ -1629,7 +1695,7 @@ local info = Instance.new("TextLabel")
 info.Size = UDim2.new(0.9, 0, 0, 55)
 info.Position = UDim2.new(0.05, 0, 0, 195)
 info.BackgroundTransparency = 1
-info.Text = "✅ Safe Mode\n⚡ Мгновенное E (без задержки)\n🚀 Оптимизация скорости\n🤖 Автобай включен!\n📋 Не тепается к купленным"
+info.Text = "✅ Safe Mode + обход античита\n⚡ Мгновенное E (без задержки)\n� ПЛАВНЫЙ телепорт - обход детекта\n🤖 Автобай включен!\n📋 Не тепается к купленным"
 info.Font = Enum.Font.SourceSans
 info.TextSize = 12
 info.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -1667,16 +1733,20 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
 end)
 
 print("🎉 Safe ESP загружен!")
-print("✅ БЕЗ обхода - НЕ кикнет")
+print("✅ С ОБХОДОМ АНТИЧИТА - защита от кика")
 print("⚡ БЕЗОПАСНЫЕ задержки - защита от античита")
 print("�️ Увеличенные интервалы для стабильной работы")
 print("🔄 ESP автоматически пропадает когда вещь исчезает!")
 print("   → Проверка каждые 0.15с + мгновенная реакция на удаление")
 print("   → Отслеживание манекенов, одежды, слотов и аксессуаров")
 print("🤖 АВТОБАЙ оптимизирован с безопасными задержками!")
+print("🛸 ПЛАВНЫЙ ТЕЛЕПОРТ - обход детекта античита!")
 print("")
 print("⏱️ ЗАДЕРЖКИ (безопасные для античита):")
-print("   • Телепорт: 0.3с → 0.8с между действиями")
+print("   • Телепорт: ПЛАВНЫЙ с адаптивной скоростью")
+print("     - < 15 стадов: мгновенный")
+print("     - 15-100 стадов: 5 шагов (0.25с)")
+print("     - > 100 стадов: 8 шагов (0.64с)")
 print("   • Взятие предмета: 1.2с")
 print("   • Открытие GUI: 0.9с")
 print("   • Оплата: 0.7с")
@@ -1690,7 +1760,11 @@ print("")
 print("🎮 GUI в левой верхней части экрана")
 print("Готов к использованию!")
 print("")
-print("🔥 НОВАЯ ФИЧА: Отслеживание купленных предметов!")
-print("   → После покупки предмет добавляется в список")
-print("   → Автобай не тепается к купленным предметам")
-print("   → Кнопка 'Очистить список' сбрасывает купленные")
+print("🔥 НОВЫЕ ФИЧИ:")
+print("   🛸 Плавный телепорт - античит НЕ видит телепорт!")
+print("     → Адаптивная скорость в зависимости от расстояния")
+print("     → Плавное перемещение маленькими шагами")
+print("   📋 Отслеживание купленных предметов")
+print("     → После покупки предмет добавляется в список")
+print("     → Автобай не тепается к купленным предметам")
+print("     → Кнопка 'Очистить список' сбрасывает купленные")
