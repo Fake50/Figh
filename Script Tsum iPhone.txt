@@ -1763,256 +1763,190 @@
         return count
     end
 
-    -- ============================================
-    -- ПРОСТОЕ GUI (без Rayfield)
-    -- ============================================
-    print("🎨 Создаю GUI...")
+  -- ============================================
+-- ПРОСТОЕ GUI (без Rayfield)
+-- ============================================
+print("🎨 Создаю GUI...")
 
-    -- Ждём что игрок полностью загрузился
-    if not player.Character then
-        print("⏳ Жду загрузки персонажа...")
-        local timeout = 0
-        while not player.Character and timeout < 30 do
-            task.wait(0.5)
-            timeout = timeout + 0.5
-        end
-        task.wait(2) -- Дополнительное время после спавна
+task.wait(2)
+
+local playerGui = player:WaitForChild("PlayerGui", 10)
+if not playerGui then
+    warn("❌ Ошибка загрузки GUI - Перезагрузи скрипт")
+end
+
+pcall(function()
+    local old = playerGui:FindFirstChild("SafeESP")
+    if old then old:Destroy() end
+end)
+
+task.wait(0.5)
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SafeESP"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 290)
+frame.Position = UDim2.new(0.5, -125, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 180, 0)
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
+title.BorderSizePixel = 0
+title.Text = "🔥 SAFE ESP"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(0, 0, 0)
+title.Parent = frame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = title
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.9, 0, 0, 40)
+button.Position = UDim2.new(0.05, 0, 0, 50)
+button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+button.BorderSizePixel = 1
+button.BorderColor3 = Color3.fromRGB(255, 255, 255)
+button.Text = "Включить ESP"
+button.Font = Enum.Font.SourceSansBold
+button.TextSize = 16
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Parent = frame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 8)
+buttonCorner.Parent = button
+
+button.MouseButton1Click:Connect(function()
+    if not espEnabled then
+        enableESP()
+        button.Text = "Выключить ESP"
+        button.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     else
-        task.wait(1) -- Даем игре прогрузиться
+        disableESP()
+        button.Text = "Включить ESP"
+        button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
+end)
 
-    -- Проверяем что PlayerGui существует
-    local playerGui = player:FindFirstChild("PlayerGui")
-    if not playerGui then
-        print("⏳ Жду PlayerGui...")
-        local timeout = 0
-        while not playerGui and timeout < 15 do
-            task.wait(0.5)
-            timeout = timeout + 0.5
-            playerGui = player:FindFirstChild("PlayerGui")
+local autoBuyButton = Instance.new("TextButton")
+autoBuyButton.Size = UDim2.new(0.9, 0, 0, 40)
+autoBuyButton.Position = UDim2.new(0.05, 0, 0, 100)
+autoBuyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+autoBuyButton.BorderSizePixel = 1
+autoBuyButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+autoBuyButton.Text = "🤖 АВТОБАЙ"
+autoBuyButton.Font = Enum.Font.SourceSansBold
+autoBuyButton.TextSize = 16
+autoBuyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoBuyButton.Parent = frame
+
+local autoBuyCorner = Instance.new("UICorner")
+autoBuyCorner.CornerRadius = UDim.new(0, 8)
+autoBuyCorner.Parent = autoBuyButton
+
+autoBuyButton.MouseButton1Click:Connect(function()
+    if not autoBuyEnabled then
+        local success, message = startAutoBuy()
+        if success then
+            autoBuyButton.Text = "⏹️ СТОП"
+            autoBuyButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        else
+            warn(message)
         end
-    end
-
-    if not playerGui then
-        warn("❌ PlayerGui не загрузился за 15 секунд")
-        warn("Попробуй перезагрузить скрипт или зайти заново в игру")
-        warn("⚠️ GUI не будет создан")
     else
-        print("✅ PlayerGui найден, создаю интерфейс...")
+        stopAutoBuy()
+        autoBuyButton.Text = "🤖 АВТОБАЙ"
+        autoBuyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+    end
+end)
 
-        -- Удаляем старый GUI если он есть (чтобы избежать дубликатов)
-        local oldGui = playerGui:FindFirstChild("SafeESP")
-        if oldGui then
-            print("🔄 Удаляю старый GUI...")
-            oldGui:Destroy()
-            task.wait(0.5)
-        end
+local clearButton = Instance.new("TextButton")
+clearButton.Size = UDim2.new(0.9, 0, 0, 35)
+clearButton.Position = UDim2.new(0.05, 0, 0, 150)
+clearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+clearButton.BorderSizePixel = 1
+clearButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+clearButton.Text = "🗑️ Очистить список"
+clearButton.Font = Enum.Font.SourceSansBold
+clearButton.TextSize = 14
+clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+clearButton.Parent = frame
 
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "SafeESP"
-        screenGui.ResetOnSpawn = false
-        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        screenGui.Parent = playerGui
+local clearCorner = Instance.new("UICorner")
+clearCorner.CornerRadius = UDim.new(0, 8)
+clearCorner.Parent = clearButton
 
-        print("✅ GUI создан успешно!")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 250, 0, 290) -- Увеличил высоту для новой кнопки
-    frame.Position = UDim2.new(0.5, -125, 0.1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 180, 0)
-    frame.Parent = screenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 35)
-    title.BackgroundColor3 = Color3.fromRGB(255, 180, 0)
-    title.BorderSizePixel = 0
-    title.Text = "🔥 SAFE ESP"
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 18
-    title.TextColor3 = Color3.fromRGB(0, 0, 0)
-    title.Parent = frame
-
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 10)
-    titleCorner.Parent = title
-
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.9, 0, 0, 40)
-    button.Position = UDim2.new(0.05, 0, 0, 50)
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    button.BorderSizePixel = 1
-    button.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    button.Text = "Включить ESP"
-    button.Font = Enum.Font.SourceSansBold
-    button.TextSize = 16
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Parent = frame
-
-    local buttonCorner = Instance.new("UICorner")
-    buttonCorner.CornerRadius = UDim.new(0, 8)
-    buttonCorner.Parent = button
-
-    button.MouseButton1Click:Connect(function()
-        if not espEnabled then
-            enableESP()
-            button.Text = "Выключить ESP"
-            button.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-        else
-            disableESP()
-            button.Text = "Включить ESP"
-            button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        end
-    end)
-
-    -- Кнопка автобая
-    local autoBuyButton = Instance.new("TextButton")
-    autoBuyButton.Size = UDim2.new(0.9, 0, 0, 40)
-    autoBuyButton.Position = UDim2.new(0.05, 0, 0, 100)
-    autoBuyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-    autoBuyButton.BorderSizePixel = 1
-    autoBuyButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    autoBuyButton.Text = "🤖 АВТОБАЙ"
-    autoBuyButton.Font = Enum.Font.SourceSansBold
-    autoBuyButton.TextSize = 16
-    autoBuyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    autoBuyButton.Parent = frame
-
-    local autoBuyCorner = Instance.new("UICorner")
-    autoBuyCorner.CornerRadius = UDim.new(0, 8)
-    autoBuyCorner.Parent = autoBuyButton
-
-    autoBuyButton.MouseButton1Click:Connect(function()
-        if not autoBuyEnabled then
-            local success, message = startAutoBuy()
-            if success then
-                autoBuyButton.Text = "⏹️ СТОП"
-                autoBuyButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-            else
-                warn(message)
-            end
-        else
-            stopAutoBuy()
-            autoBuyButton.Text = "🤖 АВТОБАЙ"
-            autoBuyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-        end
-    end)
-
-    -- Кнопка очистки списка купленных
-    local clearButton = Instance.new("TextButton")
-    clearButton.Size = UDim2.new(0.9, 0, 0, 35)
-    clearButton.Position = UDim2.new(0.05, 0, 0, 150)
-    clearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
-    clearButton.BorderSizePixel = 1
-    clearButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+clearButton.MouseButton1Click:Connect(function()
+    local count = clearPurchasedList()
+    clearButton.Text = "✅ Очищено: " .. count
+    task.wait(1.5)
     clearButton.Text = "🗑️ Очистить список"
-    clearButton.Font = Enum.Font.SourceSansBold
-    clearButton.TextSize = 14
-    clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    clearButton.Parent = frame
+end)
 
-    local clearCorner = Instance.new("UICorner")
-    clearCorner.CornerRadius = UDim.new(0, 8)
-    clearCorner.Parent = clearButton
+local info = Instance.new("TextLabel")
+info.Size = UDim2.new(0.9, 0, 0, 55)
+info.Position = UDim2.new(0.05, 0, 0, 195)
+info.BackgroundTransparency = 1
+info.Text = "✅ Safe + обход\n⚡ Мгновенное E\n🛡️ Телепорт 25 ст/сек\n🤖 Автобай\n📋 ESP авто-удаление"
+info.Font = Enum.Font.SourceSans
+info.TextSize = 12
+info.TextColor3 = Color3.fromRGB(200, 200, 200)
+info.TextYAlignment = Enum.TextYAlignment.Top
+info.Parent = frame
 
-    clearButton.MouseButton1Click:Connect(function()
-        local count = clearPurchasedList()
-        clearButton.Text = "✅ Очищено: " .. count
-        task.wait(1.5)
-        clearButton.Text = "🗑️ Очистить список"
-    end)
+local dragging, dragInput, dragStart, startPos
 
-    local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(0.9, 0, 0, 55)
-    info.Position = UDim2.new(0.05, 0, 0, 195)
-    info.BackgroundTransparency = 1
-    info.Text = "✅ Safe Mode + обход античита\n⚡ Мгновенное E (без задержки)\n🛡️ ПРОДВИНУТЫЙ телепорт (25 стад/сек)\n🤖 Автобай включен!\n📋 ESP только для существующих вещей"
-    info.Font = Enum.Font.SourceSans
-    info.TextSize = 12
-    info.TextColor3 = Color3.fromRGB(200, 200, 200)
-    info.TextYAlignment = Enum.TextYAlignment.Top
-    info.Parent = frame
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
 
-    -- Драг
-    local dragging, dragInput, dragStart, startPos
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
 
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
+frame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
 
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
 
-    frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    print("🎉 Safe ESP загружен!")
-    print("✅ С ОБХОДОМ АНТИЧИТА - защита от кика")
-    print("⚡ БЕЗОПАСНЫЕ задержки - защита от античита")
-    print("�️ Увеличенные интервалы для стабильной работы")
-    print("🔄 ESP автоматически пропадает когда вещь исчезает!")
-    print("   → Проверка каждые 0.15с + мгновенная реакция на удаление")
-    print("   → Отслеживание манекенов, одежды, слотов и аксессуаров")
-    print("🤖 АВТОБАЙ оптимизирован с безопасными задержками!")
-    print("�️ ПРОДВИНУТЫЙ ТЕЛЕПОРТ - максимальная защита от античита!")
-    print("")
-    print("⏱️ ЗАДЕРЖКИ (безопасные для античита):")
-    print("   • Телепорт: УМНЫЙ с имитацией человека")
-    print("     - < 10 стадов: мгновенный")
-    print("     - 10-30 стадов: быстрый (1с)")
-    print("     - > 30 стадов: ПРОДВИНУТЫЙ ОБХОД")
-    print("       → Скорость контролируется (макс 18 стад/сек)")
-    print("       → Разбивка на сегменты с паузами")
-    print("       → Случайные отклонения траектории")
-    print("       → Имитация человеческого движения")
-    print("   • Взятие предмета: 1.2с")
-    print("   • Открытие GUI: 0.9с")
-    print("   • Оплата: 0.7с")
-    print("   • Между покупками: 0.8с")
-    print("")
-    print("📝 Инструкция:")
-    print("1. Нажми 'Включить ESP' - найдет все вещи")
-    print("2. Нажми 'АВТОБАЙ' - купит все безопасно")
-    print("3. ESP автоматически удалится когда вещь пропадет с вешалки")
-    print("")
-    print("🎮 GUI в левой верхней части экрана")
-    print("Готов к использованию!")
-    print("")
-    print("🔥 НОВЫЕ ФИЧИ:")
-    print("   🛡️ ПРОДВИНУТЫЙ телепорт - МАКСИМАЛЬНЫЙ обход античита!")
-    print("     → Контроль скорости передвижения (макс 18 стад/сек)")
-    print("     → Разбивка пути на сегменты с паузами")
-    print("     → Случайные отклонения для имитации человека")
-    print("     → Античит видит обычное движение персонажа!")
-    print("   📋 Отслеживание купленных предметов")
-    print("     → После покупки предмет добавляется в список")
-    print("     → Автобай не телепается к купленным предметам")
-    print("     → Кнопка 'Очистить список' сбрасывает купленные")
-    print("")
-    print("=" .. string.rep("=", 48))
-    print("🎯 GUI УСПЕШНО ЗАГРУЖЕН!")
-    print("Если не видишь GUI - подожди 2-3 секунды")
-    print("=" .. string.rep("=", 48))
-end -- Закрываем else блок для playerGui
+print("=" .. string.rep("=", 48))
+print("🎯 GUI ЗАГРУЖЕН!")
+print("=" .. string.rep("=", 48))
+print("✅ Safe ESP готов")
+print("🛡️ Телепорт активен")
+print("📋 ESP авто-удаление")
+print("🤖 Автобай готов")
+print("")
+print("📝 Инструкция:")
+print("1. Включить ESP")
+print("2. АВТОБАЙ")
+print("3. Очистить список")
+print("=" .. string.rep("=", 48))
+  
