@@ -388,41 +388,93 @@ local function clearESP()
     espTracking = {}
 end
 
+-- Функция для принудительного удаления ESP
+local function forceRemoveESP(model, reason)
+    if not espTracking[model] then return end
+    
+    local espData = espTracking[model]
+    local itemName = ""
+    
+    if espData.label and espData.label:IsA("BillboardGui") then
+        local label = espData.label:FindFirstChild("ESP_Text")
+        if label and label:IsA("TextLabel") then
+            itemName = label.Text
+        end
+    end
+    
+    pcall(function()
+        if espData.highlight and espData.highlight.Parent then
+            espData.highlight:Destroy()
+        end
+    end)
+    pcall(function()
+        if espData.label and espData.label.Parent then
+            espData.label:Destroy()
+        end
+    end)
+    
+    espTracking[model] = nil
+    
+    if itemName ~= "" then
+        print("🗑️ ESP удален (" .. reason .. "):", itemName)
+    end
+end
+
 local function updateESP()
-    -- Проверяем каждый объект, если он пропал - удаляем его ESP
+    -- Создаем список для удаления (чтобы избежать изменения таблицы во время итерации)
+    local toRemove = {}
+    
     for model, espData in pairs(espTracking) do
         local shouldRemove = false
         local removeReason = ""
         
         -- Проверка 1: Модель существует в workspace?
-        if not model or not model.Parent or model.Parent == nil then
+        if not model or not model.Parent then
             shouldRemove = true
             removeReason = "модель удалена"
         end
         
-        -- Проверка 2: Модель все еще в workspace?
-        if not shouldRemove and not model:IsDescendantOf(workspace) then
-            shouldRemove = true
-            removeReason = "модель не в workspace"
+        -- Проверка 2: Модель все еще потомок workspace?
+        if not shouldRemove then
+            local success = pcall(function()
+                if not model:IsDescendantOf(workspace) then
+                    shouldRemove = true
+                    removeReason = "модель не в workspace"
+                end
+            end)
+            if not success then
+                shouldRemove = true
+                removeReason = "ошибка проверки модели"
+            end
         end
         
         -- Проверка 3: Слот существует? (для вещей)
         if not shouldRemove and espData.slot then
-            if not espData.slot.Parent or espData.slot.Parent == nil then
+            if not espData.slot.Parent then
                 shouldRemove = true
                 removeReason = "слот удален"
-            elseif not espData.slot:IsDescendantOf(workspace) then
-                shouldRemove = true
-                removeReason = "слот не в workspace"
             else
-                -- Проверяем что манекен все еще в слоте
-                local mannequinInSlot = espData.slot:FindFirstChild("Mannequin")
-                if not mannequinInSlot then
+                local success = pcall(function()
+                    if not espData.slot:IsDescendantOf(workspace) then
+                        shouldRemove = true
+                        removeReason = "слот не в workspace"
+                    end
+                end)
+                if not success then
                     shouldRemove = true
-                    removeReason = "манекен удален из слота"
-                elseif mannequinInSlot ~= model then
-                    shouldRemove = true
-                    removeReason = "другой манекен в слоте"
+                    removeReason = "ошибка проверки слота"
+                end
+                
+                if not shouldRemove then
+                    -- Проверяем что манекен все еще в слоте
+                    local mannequinInSlot = espData.slot:FindFirstChild("Mannequin")
+                    if not mannequinInSlot then
+                        shouldRemove = true
+                        removeReason = "манекен удален из слота"
+                    elseif mannequinInSlot ~= model then
+                        shouldRemove = true
+                        removeReason = "другой манекен в слоте"
+                    end
                 end
             end
         end
@@ -430,23 +482,25 @@ local function updateESP()
         -- Проверка 4: Для манекенов - есть ли еще одежда из базы?
         if not shouldRemove and model:IsA("Model") and model.Name == "Mannequin" then
             local hasTargetClothing = false
-            for _, child in pairs(model:GetChildren()) do
-                if child:IsA("Shirt") then
-                    local id = child.ShirtTemplate:match("%d+")
-                    if id and ASSETS[id] then
-                        hasTargetClothing = true
-                        break
-                    end
-                elseif child:IsA("Pants") then
-                    local id = child.PantsTemplate:match("%d+")
-                    if id and ASSETS[id] then
-                        hasTargetClothing = true
-                        break
+            local success = pcall(function()
+                for _, child in pairs(model:GetChildren()) do
+                    if child:IsA("Shirt") then
+                        local id = child.ShirtTemplate:match("%d+")
+                        if id and ASSETS[id] then
+                            hasTargetClothing = true
+                            break
+                        end
+                    elseif child:IsA("Pants") then
+                        local id = child.PantsTemplate:match("%d+")
+                        if id and ASSETS[id] then
+                            hasTargetClothing = true
+                            break
+                        end
                     end
                 end
-            end
-            -- Если целевая одежда пропала - удаляем ESP
-            if not hasTargetClothing then
+            end)
+            
+            if not success or not hasTargetClothing then
                 shouldRemove = true
                 removeReason = "одежда пропала с манекена"
             end
@@ -454,59 +508,46 @@ local function updateESP()
         
         -- Проверка 5: Для аксессуаров - существует ли Handle/Body с нужным MeshId?
         if not shouldRemove and model:IsA("Model") and model.Name:match("^M_") then
-            local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
-            if not target or not target:IsA("MeshPart") then
-                shouldRemove = true
-                removeReason = "Handle/Body удален"
-            else
-                local meshId = target.MeshId:match("%d+")
-                if not meshId or not ACCESSORIES[meshId] then
+            local success = pcall(function()
+                local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
+                if not target or not target:IsA("MeshPart") then
                     shouldRemove = true
-                    removeReason = "MeshId изменен или удален"
+                    removeReason = "Handle/Body удален"
+                else
+                    local meshId = target.MeshId:match("%d+")
+                    if not meshId or not ACCESSORIES[meshId] then
+                        shouldRemove = true
+                        removeReason = "MeshId изменен или удален"
+                    end
                 end
+            end)
+            
+            if not success then
+                shouldRemove = true
+                removeReason = "ошибка проверки аксессуара"
             end
         end
         
         -- Проверка 6: ESP элементы существуют?
         if not shouldRemove then
-            if espData.highlight and (not espData.highlight.Parent or espData.highlight.Parent == nil) then
+            if espData.highlight and not pcall(function() return espData.highlight.Parent end) then
                 shouldRemove = true
-                removeReason = "highlight удален"
+                removeReason = "highlight поврежден"
             end
-            if espData.label and (not espData.label.Parent or espData.label.Parent == nil) then
+            if espData.label and not pcall(function() return espData.label.Parent end) then
                 shouldRemove = true
-                removeReason = "label удален"
+                removeReason = "label поврежден"
             end
         end
         
-        -- Удаляем ESP если нужно
         if shouldRemove then
-            local itemName = ""
-            if espData.label and espData.label:IsA("BillboardGui") then
-                local label = espData.label:FindFirstChild("ESP_Text")
-                if label and label:IsA("TextLabel") then
-                    itemName = label.Text
-                end
-            end
-            
-            pcall(function()
-                if espData.highlight and espData.highlight.Parent then
-                    espData.highlight:Destroy()
-                end
-            end)
-            pcall(function()
-                if espData.label and espData.label.Parent then
-                    espData.label:Destroy()
-                end
-            end)
-            espTracking[model] = nil
-            
-            if itemName ~= "" then
-                print("🗑️ ESP удален (" .. removeReason .. "):", itemName)
-            else
-                print("🗑️ ESP удален (" .. removeReason .. ")")
-            end
+            table.insert(toRemove, {model = model, reason = removeReason})
         end
+    end
+    
+    -- Удаляем все помеченные ESP
+    for _, data in ipairs(toRemove) do
+        forceRemoveESP(data.model, data.reason)
     end
 end
 
@@ -1030,6 +1071,72 @@ local function buyItem(mannequinData)
     local mannequin = mannequinData.mannequin
     local clothingData = mannequinData.clothingData
     
+    -- ==========================================
+    -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОКУПКОЙ
+    -- ==========================================
+    
+    -- ПРОВЕРКА 1: Манекен все еще существует?
+    local mannequinExists = pcall(function()
+        return mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace)
+    end)
+    
+    if not mannequinExists or not mannequin or not mannequin.Parent then
+        autoBuyRunning = false
+        print("⚠️ Манекен уже не существует (вероятно уже куплен)")
+        forceRemoveESP(mannequin, "манекен исчез перед покупкой")
+        return false, "Манекен не существует"
+    end
+    
+    -- ПРОВЕРКА 2: Слот все еще существует?
+    local slotExists = pcall(function()
+        return slot and slot.Parent and slot:IsDescendantOf(workspace)
+    end)
+    
+    if not slotExists or not slot or not slot.Parent then
+        autoBuyRunning = false
+        print("⚠️ Слот не существует (вешалка пропала)")
+        forceRemoveESP(mannequin, "слот исчез перед покупкой")
+        return false, "Слот не существует"
+    end
+    
+    -- ПРОВЕРКА 3: Манекен все еще в слоте?
+    local mannequinInSlot = slot:FindFirstChild("Mannequin")
+    if not mannequinInSlot or mannequinInSlot ~= mannequin then
+        autoBuyRunning = false
+        print("⚠️ Манекен не в слоте (уже куплен другим игроком)")
+        forceRemoveESP(mannequin, "манекен не в слоте")
+        return false, "Манекен не в слоте"
+    end
+    
+    -- ПРОВЕРКА 4: Одежда все еще на манекене?
+    local hasTargetClothing = false
+    for _, child in pairs(mannequin:GetChildren()) do
+        if child:IsA("Shirt") then
+            local id = child.ShirtTemplate:match("%d+")
+            if id and ASSETS[id] then
+                hasTargetClothing = true
+                break
+            end
+        elseif child:IsA("Pants") then
+            local id = child.PantsTemplate:match("%d+")
+            if id and ASSETS[id] then
+                hasTargetClothing = true
+                break
+            end
+        end
+    end
+    
+    if not hasTargetClothing then
+        autoBuyRunning = false
+        print("⚠️ Одежда уже не на манекене (куплена)")
+        forceRemoveESP(mannequin, "одежда исчезла")
+        return false, "Одежда не найдена"
+    end
+    
+    -- ==========================================
+    -- ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ - НАЧИНАЕМ ПОКУПКУ
+    -- ==========================================
+    
     -- Получаем имя вещи
     local itemNames = {}
     if clothingData.shirtId then
@@ -1163,6 +1270,9 @@ local function buyItem(mannequinData)
     
     task.wait(0.5) -- Уменьшенная задержка
     
+    -- УДАЛЯЕМ ESP после успешной покупки
+    forceRemoveESP(mannequin, "успешно куплено")
+    
     autoBuyRunning = false
     print("")
     print("═══════════════════════════════")
@@ -1220,6 +1330,53 @@ local function startAutoBuy()
                 break
             end
             
+            -- ============================================
+            -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОПЫТКОЙ КУПИТЬ
+            -- ============================================
+            local mannequin = item.data.mannequin
+            local slot = item.data.slot
+            
+            -- Проверяем что вещь все еще существует
+            local itemStillExists = false
+            pcall(function()
+                if mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace) then
+                    if slot and slot.Parent and slot:IsDescendantOf(workspace) then
+                        local mannequinInSlot = slot:FindFirstChild("Mannequin")
+                        if mannequinInSlot == mannequin then
+                            -- Проверяем что одежда все еще на манекене
+                            for _, child in pairs(mannequin:GetChildren()) do
+                                if child:IsA("Shirt") then
+                                    local id = child.ShirtTemplate:match("%d+")
+                                    if id and ASSETS[id] then
+                                        itemStillExists = true
+                                        break
+                                    end
+                                elseif child:IsA("Pants") then
+                                    local id = child.PantsTemplate:match("%d+")
+                                    if id and ASSETS[id] then
+                                        itemStillExists = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            if not itemStillExists then
+                -- Вещь уже куплена или пропала - пропускаем и удаляем ESP
+                print("⏭️ ПРОПУСК (вещь уже куплена или пропала)")
+                forceRemoveESP(mannequin, "вещь пропала в автобае")
+                updateESP() -- Принудительное обновление
+                task.wait(0.1)
+                continue
+            end
+            
+            -- ============================================
+            -- ПРОВЕРКА ДЕНЕГ
+            -- ============================================
+            
             -- Обновляем баланс перед каждой покупкой
             playerMoney = getPlayerMoney()
             
@@ -1255,8 +1412,13 @@ local function startAutoBuy()
                 local success, message = buyItem(item.data)
                 if success then
                     bought = bought + 1
+                    updateESP() -- Обновляем ESP после покупки
                 else
-                    if message ~= "Не хватает денег" then
+                    if message == "Манекен не существует" or message == "Слот не существует" or 
+                       message == "Манекен не в слоте" or message == "Одежда не найдена" then
+                        -- Вещь уже куплена, не считаем ошибкой
+                        print("⏭️ Вещь уже куплена")
+                    elseif message ~= "Не хватает денег" then
                         errors = errors + 1
                         warn("❌", message)
                     end
