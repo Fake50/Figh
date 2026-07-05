@@ -392,52 +392,90 @@ local function updateESP()
     -- Проверяем каждый объект, если он пропал - удаляем его ESP
     for model, espData in pairs(espTracking) do
         local shouldRemove = false
+        local removeReason = ""
         
-        -- Проверка 1: Модель существует?
+        -- Проверка 1: Модель существует в workspace?
         if not model or not model.Parent or model.Parent == nil then
             shouldRemove = true
+            removeReason = "модель удалена"
         end
         
-        -- Проверка 2: Слот существует? (для вещей)
+        -- Проверка 2: Модель все еще в workspace?
+        if not shouldRemove and not model:IsDescendantOf(workspace) then
+            shouldRemove = true
+            removeReason = "модель не в workspace"
+        end
+        
+        -- Проверка 3: Слот существует? (для вещей)
         if not shouldRemove and espData.slot then
             if not espData.slot.Parent or espData.slot.Parent == nil then
                 shouldRemove = true
+                removeReason = "слот удален"
+            elseif not espData.slot:IsDescendantOf(workspace) then
+                shouldRemove = true
+                removeReason = "слот не в workspace"
             else
                 -- Проверяем что манекен все еще в слоте
                 local mannequinInSlot = espData.slot:FindFirstChild("Mannequin")
-                if not mannequinInSlot or mannequinInSlot ~= model then
+                if not mannequinInSlot then
                     shouldRemove = true
+                    removeReason = "манекен удален из слота"
+                elseif mannequinInSlot ~= model then
+                    shouldRemove = true
+                    removeReason = "другой манекен в слоте"
                 end
             end
         end
         
-        -- Проверка 3: Для манекенов - есть ли еще одежда?
+        -- Проверка 4: Для манекенов - есть ли еще одежда из базы?
         if not shouldRemove and model:IsA("Model") and model.Name == "Mannequin" then
-            local hasClothing = false
+            local hasTargetClothing = false
             for _, child in pairs(model:GetChildren()) do
-                if child:IsA("Shirt") or child:IsA("Pants") then
-                    hasClothing = true
-                    break
+                if child:IsA("Shirt") then
+                    local id = child.ShirtTemplate:match("%d+")
+                    if id and ASSETS[id] then
+                        hasTargetClothing = true
+                        break
+                    end
+                elseif child:IsA("Pants") then
+                    local id = child.PantsTemplate:match("%d+")
+                    if id and ASSETS[id] then
+                        hasTargetClothing = true
+                        break
+                    end
                 end
             end
-            -- Если одежда пропала - удаляем ESP
-            if not hasClothing then
+            -- Если целевая одежда пропала - удаляем ESP
+            if not hasTargetClothing then
                 shouldRemove = true
+                removeReason = "одежда пропала с манекена"
             end
         end
         
-        -- Проверка 4: Для аксессуаров - существует ли Handle/Body?
+        -- Проверка 5: Для аксессуаров - существует ли Handle/Body с нужным MeshId?
         if not shouldRemove and model:IsA("Model") and model.Name:match("^M_") then
             local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
             if not target or not target:IsA("MeshPart") then
                 shouldRemove = true
+                removeReason = "Handle/Body удален"
+            else
+                local meshId = target.MeshId:match("%d+")
+                if not meshId or not ACCESSORIES[meshId] then
+                    shouldRemove = true
+                    removeReason = "MeshId изменен или удален"
+                end
             end
         end
         
-        -- Проверка 5: ESP элементы существуют?
+        -- Проверка 6: ESP элементы существуют?
         if not shouldRemove then
             if espData.highlight and (not espData.highlight.Parent or espData.highlight.Parent == nil) then
                 shouldRemove = true
+                removeReason = "highlight удален"
+            end
+            if espData.label and (not espData.label.Parent or espData.label.Parent == nil) then
+                shouldRemove = true
+                removeReason = "label удален"
             end
         end
         
@@ -464,7 +502,9 @@ local function updateESP()
             espTracking[model] = nil
             
             if itemName ~= "" then
-                print("🗑️ ESP удален (вещь пропала):", itemName)
+                print("🗑️ ESP удален (" .. removeReason .. "):", itemName)
+            else
+                print("🗑️ ESP удален (" .. removeReason .. ")")
             end
         end
     end
@@ -526,43 +566,95 @@ local function enableESP()
     task.spawn(function()
         while espEnabled do
             updateESP()
-            task.wait(0.2) -- Проверяем каждые 0.2 секунды (быстрее)
+            task.wait(0.15) -- Проверяем каждые 0.15 секунды (быстрее реагирует)
         end
     end)
     
-    -- Добавляем слушателя на удаление объектов
+    -- Добавляем слушателя на удаление объектов для мгновенной реакции
     for model, trackData in pairs(espTracking) do
         if model and model.Parent then
             -- Следим за удалением модели
             model.AncestryChanged:Connect(function(_, parent)
-                if parent == nil then
-                    -- Модель удалена из Workspace
-                    task.wait(0.1)
+                if parent == nil or not model:IsDescendantOf(workspace) then
+                    -- Модель удалена из Workspace - мгновенно обновляем
+                    task.wait(0.05)
                     updateESP()
                 end
             end)
             
             -- Следим за удалением одежды у манекенов
             if model:IsA("Model") and model.Name == "Mannequin" then
+                -- Следим за существующей одеждой
                 for _, child in pairs(model:GetChildren()) do
                     if child:IsA("Shirt") or child:IsA("Pants") then
-                        child.AncestryChanged:Connect(function(_, parent)
-                            if parent == nil then
-                                -- Одежда удалена
-                                task.wait(0.1)
+                        local clothingId = nil
+                        if child:IsA("Shirt") then
+                            clothingId = child.ShirtTemplate:match("%d+")
+                        else
+                            clothingId = child.PantsTemplate:match("%d+")
+                        end
+                        
+                        -- Только для одежды из нашей базы
+                        if clothingId and ASSETS[clothingId] then
+                            child.AncestryChanged:Connect(function(_, parent)
+                                if parent == nil or not child:IsDescendantOf(model) then
+                                    -- Одежда удалена - мгновенно обновляем
+                                    task.wait(0.05)
+                                    updateESP()
+                                end
+                            end)
+                            
+                            -- Следим за изменением Template (если вещь заменили)
+                            child:GetPropertyChangedSignal("ShirtTemplate"):Connect(function()
+                                task.wait(0.05)
                                 updateESP()
+                            end)
+                            if child:IsA("Pants") then
+                                child:GetPropertyChangedSignal("PantsTemplate"):Connect(function()
+                                    task.wait(0.05)
+                                    updateESP()
+                                end)
                             end
-                        end)
+                        end
                     end
+                end
+                
+                -- Следим за добавлением новых детей (вдруг одежда появилась)
+                model.ChildRemoved:Connect(function(child)
+                    if child:IsA("Shirt") or child:IsA("Pants") then
+                        task.wait(0.05)
+                        updateESP()
+                    end
+                end)
+            end
+            
+            -- Следим за аксессуарами
+            if model:IsA("Model") and model.Name:match("^M_") then
+                local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
+                if target then
+                    target.AncestryChanged:Connect(function(_, parent)
+                        if parent == nil or not target:IsDescendantOf(model) then
+                            task.wait(0.05)
+                            updateESP()
+                        end
+                    end)
                 end
             end
             
             -- Следим за слотом (для вещей)
             if trackData.slot and trackData.slot.Parent then
                 trackData.slot.AncestryChanged:Connect(function(_, parent)
-                    if parent == nil then
-                        -- Слот удален
-                        task.wait(0.1)
+                    if parent == nil or not trackData.slot:IsDescendantOf(workspace) then
+                        -- Слот удален - мгновенно обновляем
+                        task.wait(0.05)
+                        updateESP()
+                    end
+                end)
+                
+                -- Следим за изменением детей слота (манекен может быть заменен)
+                trackData.slot.ChildRemoved:Connect(function(child)
+                    if child == model or child.Name == "Mannequin" then
+                        task.wait(0.05)
                         updateESP()
                     end
                 end)
@@ -1351,13 +1443,15 @@ print("🎉 Safe ESP загружен!")
 print("✅ БЕЗ обхода - НЕ кикнет")
 print("⚡ Мгновенное нажатие E - без задержки")
 print("💨 Все операции ускорены в 2-3 раза")
-print("🔄 ESP пропадает если вещь исчезла (проверка каждые 0.2с)")
+print("🔄 ESP автоматически пропадает когда вещь исчезает!")
+print("   → Проверка каждые 0.15с + мгновенная реакция на удаление")
+print("   → Отслеживание манекенов, одежды, слотов и аксессуаров")
 print("🤖 АВТОБАЙ оптимизирован!")
 print("")
 print("📝 Инструкция:")
 print("1. Нажми 'Включить ESP' - найдет все вещи")
 print("2. Нажми 'АВТОБАЙ' - купит все быстро")
-print("3. ESP автоматически удалится когда вещь пропадет")
+print("3. ESP автоматически удалится когда вещь пропадет с вешалки")
 print("")
 print("🎮 GUI в левой верхней части экрана")
 print("Готов к использованию!")
