@@ -902,7 +902,7 @@ local function teleportTo(position)
     if not hrp then return false end
     
     hrp.CFrame = CFrame.new(position)
-    task.wait(0.3) -- Увеличенная задержка телепорта для безопасности
+    task.wait(0.5) -- Еще больше задержка после телепорта для стабильности
     return true
 end
 
@@ -944,8 +944,8 @@ local function takeItem(slotId, slot)
         return false
     end
     
-    -- Увеличенная задержка для корзины (чтобы вещь точно попала)
-    task.wait(1.2)
+    -- СИЛЬНО увеличенная задержка для корзины (чтобы вещь ТОЧНО попала)
+    task.wait(1.8)
     print("✅ Предмет должен быть в корзине")
     
     return true
@@ -988,8 +988,8 @@ local function openShopNPC(npc)
         return false
     end
     
-    -- Увеличенная задержка для загрузки GUI магазина
-    task.wait(0.9)
+    -- СИЛЬНО увеличенная задержка для загрузки GUI магазина
+    task.wait(1.2)
     print("✅ GUI магазина должен быть открыт")
     
     return true
@@ -1001,8 +1001,8 @@ local function purchaseItem(slotId)
     
     local playerGui = player:WaitForChild("PlayerGui")
     
-    -- Увеличенная задержка для загрузки GUI
-    task.wait(0.5)
+    -- СИЛЬНО увеличенная задержка для загрузки GUI
+    task.wait(0.8)
     
     -- Ищем кнопку PAY
     print("🔍 Ищу кнопку PAY в GUI...")
@@ -1034,7 +1034,7 @@ local function purchaseItem(slotId)
                             button.MouseButton1Click:Fire()
                         end)
                         
-                        task.wait(0.5) -- Увеличенная задержка после нажатия PAY
+                        task.wait(0.7) -- СИЛЬНО увеличенная задержка после нажатия PAY
                         break
                     end
                 end
@@ -1044,7 +1044,7 @@ local function purchaseItem(slotId)
     end
     
     -- Отправляем RemoteFunction для покупки
-    task.wait(0.5) -- Увеличенная задержка перед RemoteFunction
+    task.wait(0.8) -- СИЛЬНО увеличенная задержка перед RemoteFunction
     print("📡 Вызываю RemoteFunction ShopPurchase...")
     local success, result = pcall(function()
         local args = {"ShopPurchase", {slotId}}
@@ -1210,7 +1210,7 @@ local function buyItem(mannequinData)
     end
     print("✅ Телепортирован к предмету")
     
-    task.wait(0.8) -- Увеличенная задержка после телепорта
+    task.wait(1.2) -- СИЛЬНО увеличенная задержка после телепорта к предмету
     
     -- Шаг 2: Взять предмет (нажать E)
     print("")
@@ -1222,7 +1222,7 @@ local function buyItem(mannequinData)
     end
     print("✅ Предмет взят и в корзине")
     
-    task.wait(1.0) -- Увеличенная задержка после взятия предмета
+    task.wait(1.5) -- СИЛЬНО увеличенная задержка после взятия предмета
     
     -- Шаг 3: Найти NPC
     print("")
@@ -1246,7 +1246,7 @@ local function buyItem(mannequinData)
     end
     print("✅ Телепортирован к NPC")
     
-    task.wait(0.8) -- Увеличенная задержка после телепорта к NPC
+    task.wait(1.0) -- СИЛЬНО увеличенная задержка после телепорта к NPC
     
     -- Шаг 5: Открыть магазин (нажать E на NPC)
     print("")
@@ -1258,7 +1258,7 @@ local function buyItem(mannequinData)
     end
     print("✅ Магазин открыт")
     
-    task.wait(0.9) -- Увеличенная задержка после открытия магазина
+    task.wait(1.2) -- СИЛЬНО увеличенная задержка после открытия магазина
     
     -- Шаг 6: Оплата (нажать PAY)
     print("")
@@ -1269,7 +1269,7 @@ local function buyItem(mannequinData)
         return false, "Ошибка при оплате"
     end
     
-    task.wait(0.7) -- Увеличенная задержка после оплаты
+    task.wait(1.0) -- СИЛЬНО увеличенная задержка после оплаты
     
     -- УДАЛЯЕМ ESP после успешной покупки
     forceRemoveESP(mannequin, "успешно куплено")
@@ -1425,7 +1425,7 @@ local function startAutoBuy()
                     end
                 end
                 
-                task.wait(0.8) -- Увеличенная задержка между покупками для безопасности
+                task.wait(1.2) -- СИЛЬНО увеличенная задержка между покупками для безопасности
             end
         end
         
