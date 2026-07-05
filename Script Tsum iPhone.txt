@@ -1,350 +1,320 @@
-    -- ============================================
-    -- 🔥 ESP SAFE MODE - С ОБХОДОМ АНТИЧИТА
-    -- ============================================
-    -- Этот ESP НЕ использует hookmetamethod
-    -- Работает на Delta X без детекта
-    -- 
-    -- ✨ УЛУЧШЕНИЯ:
-    -- ✅ ESP автоматически пропадает если вещь исчезла
-    -- ⚡ Мгновенное нажатие E
-    -- 🛡️ БЕЗОПАСНЫЕ задержки - защита от античита
-    -- 🚀 Оптимизированные интервалы для стабильной работы
-    -- 🔄 Умная проверка существования предметов
-    -- 🛸 ПРОДВИНУТЫЙ ТЕЛЕПОРТ - максимальный обход детекта:
-    --    • Контроль скорости (макс 18 стадов/сек)
-    --    • Разбивка на сегменты с паузами
-    --    • Имитация человеческого движения
-    --    • Случайные отклонения траектории
-    -- 📋 Отслеживание купленных предметов
-    -- ============================================
+-- ============================================
+-- 🔥 ESP SAFE MODE - С ОБХОДОМ АНТИЧИТА
+-- ============================================
+-- Этот ESP НЕ использует hookmetamethod
+-- Работает на Delta X без детекта
+-- 
+-- ✨ УЛУЧШЕНИЯ:
+-- ✅ ESP автоматически пропадает если вещь исчезла
+-- ⚡ Мгновенное нажатие E
+-- 🛡️ БЕЗОПАСНЫЕ задержки - защита от античита
+-- 🚀 Оптимизированные интервалы для стабильной работы
+-- 🔄 Умная проверка существования предметов
+-- 🛸 ПРОДВИНУТЫЙ ТЕЛЕПОРТ - максимальный обход детекта:
+--    • Контроль скорости (макс 18 стадов/сек)
+--    • Разбивка на сегменты с паузами
+--    • Имитация человеческого движения
+--    • Случайные отклонения траектории
+-- 📋 Отслеживание купленных предметов
+-- ============================================
 
-    print("🔄 Загрузка Safe ESP...")
+print("🔄 Загрузка Safe ESP...")
 
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local HttpService = game:GetService("HttpService")
-    local TweenService = game:GetService("TweenService") -- Для плавного телепорта
-    local Camera = workspace.CurrentCamera
-    local player = Players.LocalPlayer
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService") -- Для плавного телепорта
+local Camera = workspace.CurrentCamera
+local player = Players.LocalPlayer
 
-    -- ============================================
-    -- ПОЛНАЯ БАЗА ДАННЫХ ВЕЩЕЙ
-    -- ============================================
-    local ASSETS = {
-        ["6004029863"] = { name = "Haliky Худи", chance = 0.001 },
-        ["8631671219"] = { name = "Stone Island Big Loom Camo-Tc", chance = 0.002 },
-        ["10443560332"] = { name = "Raf Simons AW01 Runway", chance = 0.002 },
-        ["6676412078"] = { name = "Haliky Gang Bears", chance = 0.003 },
-        ["71906531939193"] = { name = "Yohji Yamamoto Темно-Синяя", chance = 0.003 },
-        ["130162125639664"] = { name = "Yohji Yamamoto Красная", chance = 0.004 },
-        ["1329266661"] = { name = "BAPE Full Zip Shark", chance = 0.005 },
-        ["8631708414"] = { name = "Stone Island Big Loom Camo-Tc Штаны", chance = 0.005 },
-        ["92502686962334"] = { name = "Yohji Yamamoto Кожанка", chance = 0.005 },
-        ["7369775832"] = { name = "Chrome Hearts x LV Jacket", chance = 0.005 },
-        ["13429337006"] = { name = "Moncler x PA Fiber Light Puffer", chance = 0.005 },
-        ["74621497123361"] = { name = "Raf Simons Pharaxus Green Black Штаны", chance = 0.005 },
-        ["85073157438003"] = { name = "Maison Margiela Куртка из Ремней", chance = 0.005 },
-        ["6071739641"] = { name = "Off-White Virgil Abloh Красный", chance = 0.005 },
-        ["1103783722"] = { name = "Bape x Supreme", chance = 0.007 },
-        ["7205233873"] = { name = "Palm Angels Zip Кислотный", chance = 0.007 },
-        ["78339652684003"] = { name = "Stone Island x Supreme Белые", chance = 0.008 },
-        ["13876916067"] = { name = "Stone Island x Supreme", chance = 0.008 },
-        ["6501833581"] = { name = "Palm Angels Zip Цветок", chance = 0.009 },
-        ["119801182639139"] = { name = "Palm Angels Zip Фиолетовый", chance = 0.009 },
-        ["112790132457513"] = { name = "Stone Island x Supreme White Штаны", chance = 0.01 },
-        ["116321915070400"] = { name = "Stone Island x Supreme Штаны", chance = 0.01 },
-        ["118565360972858"] = { name = "Balenciaga Nasa Bomber Jacket", chance = 0.01 },
-        ["16662225319"] = { name = "Balenciaga Runway", chance = 0.01 },
-        ["127906814275652"] = { name = "Balenciaga Leather Штаны", chance = 0.01 },
-        ["5944585412"] = { name = "Chrome Hearts x Off-White Hoodie", chance = 0.01 },
-        ["126218652868749"] = { name = "Number(N)ine Shield Черное Худи", chance = 0.01 },
-        ["5972477551"] = { name = "Гоша Рубчинский Рождественский", chance = 0.015 },
-        ["126602708675680"] = { name = "Гоша Рубчинский Вдруг Друг", chance = 0.015 },
-        ["101546483409686"] = { name = "Racer WorldWide Лонгслив", chance = 0.015 },
-        ["116197719499900"] = { name = "Gutta Opiy Shirt", chance = 0.02 },
-        ["102649937877868"] = { name = "Palm Angels x Raf Blue Red", chance = 0.02 },
-        ["96072265863113"] = { name = "Stone Island Comfort Tech Purple", chance = 0.02 },
-        ["1081054865"] = { name = "Gucci Coco Capitan", chance = 0.02 },
-        ["2074367265"] = { name = "TH Hoodie X Balenciaga x RAF", chance = 0.02 },
-        ["130342095571450"] = { name = "Balenciaga Paris", chance = 0.02 },
-        ["72161303025169"] = { name = "ERD Красная Джинсовка", chance = 0.02 },
-        ["772695234"] = { name = "Гоша Рубчинский Зеленый Свитер", chance = 0.03 },
-        ["297942902"] = { name = "Cav Empt Бомбер", chance = 0.04 },
-        ["436720175"] = { name = "Гоша Рубчинский X Thrasher", chance = 0.04 },
-        ["914784451"] = { name = "Cav Empt FW 17", chance = 0.05 },
-        ["80849817692916"] = { name = "Chrome Hearts Camo Matty", chance = 0.05 },
-        ["112414916707189"] = { name = "ERD Archive Худи Красный", chance = 0.05 },
-        ["117808202442208"] = { name = "ERD Archive Лонгслив", chance = 0.05 },
-        ["17573405255"] = { name = "Number(N)ine Серый Лонгслив", chance = 0.05 },
-        ["3052304804"] = { name = "BAPE Tiger Camo", chance = 0.06 },
-        ["11796928274"] = { name = "Гоша Рубчинский Рождество Штаны", chance = 0.06 },
-        ["18280893501"] = { name = "Cav Empt Joker", chance = 0.07 },
-        ["126486170842278"] = { name = "BAPE Tiger Штаны Фиолетовые", chance = 0.08 },
-        ["93929061709529"] = { name = "Racer WorldWide Куртка", chance = 0.08 },
-        ["13778721234"] = { name = "Stone Island Skin Touch Purple", chance = 0.08 },
-        ["13779001394"] = { name = "Stone Island Purple Skin Touch Штаны", chance = 0.08 },
-        ["100168311309116"] = { name = "Gallery Dept Кепка Шамана", chance = 0.08 },
-        ["1002344601"] = { name = "Cav Empt MD Document Crewneck", chance = 0.1 },
-        ["1565502110"] = { name = "Supreme x Bape x LV", chance = 0.1 },
-        ["92202912411173"] = { name = "Raf Simons SS10 Sterling Ruby Shirt", chance = 0.1 },
-        ["322189905"] = { name = "Cav Empt Not Impossible Crewneck", chance = 0.15 },
-        ["15706847529"] = { name = "Гоша Рубчинский x Rassvet", chance = 0.15 },
-        ["1213373788"] = { name = "Off-White Camo", chance = 0.15 },
-        ["121413776309543"] = { name = "Number(N)ine Серая Zip Jacket", chance = 0.15 },
-        ["78070667368419"] = { name = "Maison Margiela Женская Меховая Куртка", chance = 0.2 },
-        ["2474144248"] = { name = "Off-White MonoLisa", chance = 0.25 },
-        ["4843433312"] = { name = "BAPE Yellow Camo Shark", chance = 0.3 },
-        ["123206690688862"] = { name = "Gutta Snake Year", chance = 0.3 },
-        ["133885913046054"] = { name = "Number(N)ine Zip Jacket", chance = 0.3 },
-        ["113679737601896"] = { name = "Stone Island Off Day Blue", chance = 0.35 },
-        ["81220837440974"] = { name = "Stone Island Red Hoodie Off Dye", chance = 0.35 },
-        ["105050054678663"] = { name = "BAPE Tiger Штаны Темно-Зеленые", chance = 0.4 },
-        ["116825151038506"] = { name = "Gutta Raiders Camo Shirt", chance = 0.4 },
-        ["1824185877"] = { name = "Гоша Рубчинский x Kappa", chance = 0.4 },
-        ["5611331856"] = { name = "Palm Angels Flame", chance = 0.4 },
-        ["119505659829019"] = { name = "BAPE Red Panda", chance = 0.5 },
-        ["136214158712256"] = { name = "BAPE Tiger Штаны Синие", chance = 0.5 },
-        ["91431686212610"] = { name = "BAPE Tiger Штаны Красные", chance = 0.5 },
-        ["1518645601"] = { name = "Gucci Tiger Hoodie", chance = 0.5 },
-        ["2109554074"] = { name = "Gucci x LV Jacket", chance = 0.5 },
-        ["70522682896000"] = { name = "Zapatillas Gucci X Amiri", chance = 0.5 },
-        ["5226567361"] = { name = "Supreme x LV", chance = 0.5 },
-        ["3244925420"] = { name = "Cav Empt Свитшот Symptom Heavy", chance = 0.6 },
-        ["13444831655"] = { name = "Supreme x BB", chance = 0.8 },
-        ["124794708387683"] = { name = "Гоша Рубчинский Fila Yellow LS", chance = 0.8 },
-        ["8631755137"] = { name = "Stone Island WATRO-TC Jacket", chance = 0.15 },
-        ["98404573180892"] = { name = "CP Company Navy Windbreaker", chance = 0.15 },
-        ["11290616968"] = { name = "Vetements Бомбер Полиции", chance = 0.15 },
-        ["98965932254784"] = { name = "Comme des Garcons X Rolling Stones", chance = 0.15 },
-        ["9930373233"] = { name = "NeNet Худи Фиолетовая", chance = 0.15 },
-    }
+-- ============================================
+-- ПОЛНАЯ БАЗА ДАННЫХ ВЕЩЕЙ
+-- ============================================
+local ASSETS = {
+    ["6004029863"] = { name = "Haliky Худи", chance = 0.001 },
+    ["8631671219"] = { name = "Stone Island Big Loom Camo-Tc", chance = 0.002 },
+    ["10443560332"] = { name = "Raf Simons AW01 Runway", chance = 0.002 },
+    ["6676412078"] = { name = "Haliky Gang Bears", chance = 0.003 },
+    ["71906531939193"] = { name = "Yohji Yamamoto Темно-Синяя", chance = 0.003 },
+    ["130162125639664"] = { name = "Yohji Yamamoto Красная", chance = 0.004 },
+    ["1329266661"] = { name = "BAPE Full Zip Shark", chance = 0.005 },
+    ["8631708414"] = { name = "Stone Island Big Loom Camo-Tc Штаны", chance = 0.005 },
+    ["92502686962334"] = { name = "Yohji Yamamoto Кожанка", chance = 0.005 },
+    ["7369775832"] = { name = "Chrome Hearts x LV Jacket", chance = 0.005 },
+    ["13429337006"] = { name = "Moncler x PA Fiber Light Puffer", chance = 0.005 },
+    ["74621497123361"] = { name = "Raf Simons Pharaxus Green Black Штаны", chance = 0.005 },
+    ["85073157438003"] = { name = "Maison Margiela Куртка из Ремней", chance = 0.005 },
+    ["6071739641"] = { name = "Off-White Virgil Abloh Красный", chance = 0.005 },
+    ["1103783722"] = { name = "Bape x Supreme", chance = 0.007 },
+    ["7205233873"] = { name = "Palm Angels Zip Кислотный", chance = 0.007 },
+    ["78339652684003"] = { name = "Stone Island x Supreme Белые", chance = 0.008 },
+    ["13876916067"] = { name = "Stone Island x Supreme", chance = 0.008 },
+    ["6501833581"] = { name = "Palm Angels Zip Цветок", chance = 0.009 },
+    ["119801182639139"] = { name = "Palm Angels Zip Фиолетовый", chance = 0.009 },
+    ["112790132457513"] = { name = "Stone Island x Supreme White Штаны", chance = 0.01 },
+    ["116321915070400"] = { name = "Stone Island x Supreme Штаны", chance = 0.01 },
+    ["118565360972858"] = { name = "Balenciaga Nasa Bomber Jacket", chance = 0.01 },
+    ["16662225319"] = { name = "Balenciaga Runway", chance = 0.01 },
+    ["127906814275652"] = { name = "Balenciaga Leather Штаны", chance = 0.01 },
+    ["5944585412"] = { name = "Chrome Hearts x Off-White Hoodie", chance = 0.01 },
+    ["126218652868749"] = { name = "Number(N)ine Shield Черное Худи", chance = 0.01 },
+    ["5972477551"] = { name = "Гоша Рубчинский Рождественский", chance = 0.015 },
+    ["126602708675680"] = { name = "Гоша Рубчинский Вдруг Друг", chance = 0.015 },
+    ["101546483409686"] = { name = "Racer WorldWide Лонгслив", chance = 0.015 },
+    ["116197719499900"] = { name = "Gutta Opiy Shirt", chance = 0.02 },
+    ["102649937877868"] = { name = "Palm Angels x Raf Blue Red", chance = 0.02 },
+    ["96072265863113"] = { name = "Stone Island Comfort Tech Purple", chance = 0.02 },
+    ["1081054865"] = { name = "Gucci Coco Capitan", chance = 0.02 },
+    ["2074367265"] = { name = "TH Hoodie X Balenciaga x RAF", chance = 0.02 },
+    ["130342095571450"] = { name = "Balenciaga Paris", chance = 0.02 },
+    ["72161303025169"] = { name = "ERD Красная Джинсовка", chance = 0.02 },
+    ["772695234"] = { name = "Гоша Рубчинский Зеленый Свитер", chance = 0.03 },
+    ["297942902"] = { name = "Cav Empt Бомбер", chance = 0.04 },
+    ["436720175"] = { name = "Гоша Рубчинский X Thrasher", chance = 0.04 },
+    ["914784451"] = { name = "Cav Empt FW 17", chance = 0.05 },
+    ["80849817692916"] = { name = "Chrome Hearts Camo Matty", chance = 0.05 },
+    ["112414916707189"] = { name = "ERD Archive Худи Красный", chance = 0.05 },
+    ["117808202442208"] = { name = "ERD Archive Лонгслив", chance = 0.05 },
+    ["17573405255"] = { name = "Number(N)ine Серый Лонгслив", chance = 0.05 },
+    ["3052304804"] = { name = "BAPE Tiger Camo", chance = 0.06 },
+    ["11796928274"] = { name = "Гоша Рубчинский Рождество Штаны", chance = 0.06 },
+    ["18280893501"] = { name = "Cav Empt Joker", chance = 0.07 },
+    ["126486170842278"] = { name = "BAPE Tiger Штаны Фиолетовые", chance = 0.08 },
+    ["93929061709529"] = { name = "Racer WorldWide Куртка", chance = 0.08 },
+    ["13778721234"] = { name = "Stone Island Skin Touch Purple", chance = 0.08 },
+    ["13779001394"] = { name = "Stone Island Purple Skin Touch Штаны", chance = 0.08 },
+    ["100168311309116"] = { name = "Gallery Dept Кепка Шамана", chance = 0.08 },
+    ["1002344601"] = { name = "Cav Empt MD Document Crewneck", chance = 0.1 },
+    ["1565502110"] = { name = "Supreme x Bape x LV", chance = 0.1 },
+    ["92202912411173"] = { name = "Raf Simons SS10 Sterling Ruby Shirt", chance = 0.1 },
+    ["322189905"] = { name = "Cav Empt Not Impossible Crewneck", chance = 0.15 },
+    ["15706847529"] = { name = "Гоша Рубчинский x Rassvet", chance = 0.15 },
+    ["1213373788"] = { name = "Off-White Camo", chance = 0.15 },
+    ["121413776309543"] = { name = "Number(N)ine Серая Zip Jacket", chance = 0.15 },
+    ["78070667368419"] = { name = "Maison Margiela Женская Меховая Куртка", chance = 0.2 },
+    ["2474144248"] = { name = "Off-White MonoLisa", chance = 0.25 },
+    ["4843433312"] = { name = "BAPE Yellow Camo Shark", chance = 0.3 },
+    ["123206690688862"] = { name = "Gutta Snake Year", chance = 0.3 },
+    ["133885913046054"] = { name = "Number(N)ine Zip Jacket", chance = 0.3 },
+    ["113679737601896"] = { name = "Stone Island Off Day Blue", chance = 0.35 },
+    ["81220837440974"] = { name = "Stone Island Red Hoodie Off Dye", chance = 0.35 },
+    ["105050054678663"] = { name = "BAPE Tiger Штаны Темно-Зеленые", chance = 0.4 },
+    ["116825151038506"] = { name = "Gutta Raiders Camo Shirt", chance = 0.4 },
+    ["1824185877"] = { name = "Гоша Рубчинский x Kappa", chance = 0.4 },
+    ["5611331856"] = { name = "Palm Angels Flame", chance = 0.4 },
+    ["119505659829019"] = { name = "BAPE Red Panda", chance = 0.5 },
+    ["136214158712256"] = { name = "BAPE Tiger Штаны Синие", chance = 0.5 },
+    ["91431686212610"] = { name = "BAPE Tiger Штаны Красные", chance = 0.5 },
+    ["1518645601"] = { name = "Gucci Tiger Hoodie", chance = 0.5 },
+    ["2109554074"] = { name = "Gucci x LV Jacket", chance = 0.5 },
+    ["70522682896000"] = { name = "Zapatillas Gucci X Amiri", chance = 0.5 },
+    ["5226567361"] = { name = "Supreme x LV", chance = 0.5 },
+    ["3244925420"] = { name = "Cav Empt Свитшот Symptom Heavy", chance = 0.6 },
+    ["13444831655"] = { name = "Supreme x BB", chance = 0.8 },
+    ["124794708387683"] = { name = "Гоша Рубчинский Fila Yellow LS", chance = 0.8 },
+    ["8631755137"] = { name = "Stone Island WATRO-TC Jacket", chance = 0.15 },
+    ["98404573180892"] = { name = "CP Company Navy Windbreaker", chance = 0.15 },
+    ["11290616968"] = { name = "Vetements Бомбер Полиции", chance = 0.15 },
+    ["98965932254784"] = { name = "Comme des Garcons X Rolling Stones", chance = 0.15 },
+    ["9930373233"] = { name = "NeNet Худи Фиолетовая", chance = 0.15 },
+}
 
-    -- ============================================
-    -- ПОЛНАЯ БАЗА ДАННЫХ АКСЕССУАРОВ
-    -- ============================================
-    local ACCESSORIES = {
-        ["14523189142"] = { name = "Maksakov Ghost", chance = 0.005 },
-        ["14615310668"] = { name = "Red Maksakov Ghost", chance = 0.08 },
-        ["14615304098"] = { name = "Pink Maksakov Ghost", chance = 0.08 },
-        ["14615307025"] = { name = "White Maksakov Ghost", chance = 0.1 },
-        ["85865866386997"] = { name = "Bape Маска", chance = 0.15 },
-        ["70765247277282"] = { name = "Baby Milo Рюкзак", chance = 0.003 },
-        ["115389802684898"] = { name = "Bape Рюкзак Camo", chance = 0.4 },
-        ["89846079310975"] = { name = "Bape Panda Shark Шапка", chance = 0.07 },
-        ["101486965390763"] = { name = "Red BAPE Tiger Backpack", chance = 0.6 },
-        ["130822108945941"] = { name = "MCM Рюкзак Красный", chance = 0.4 },
-        ["113057369240600"] = { name = "MCM Рюкзак", chance = 0.5 },
-        ["122914640223931"] = { name = "MCM Рюкзак Белый", chance = 0.6 },
-        ["116403395006931"] = { name = "MCM Рюкзак X SprayGround", chance = 0.04 },
-        ["71040675246222"] = { name = "CP Company Goggle Beanie Light Blue", chance = 0.5 },
-        ["96236164474655"] = { name = "CP Company Goggle Beanie Sail", chance = 0.3 },
-        ["84903025841942"] = { name = "CP Company Goggle Beanie Red", chance = 0.15 },
-        ["109191017280869"] = { name = "CP Company Goggle Beanie Pink", chance = 0.08 },
-        ["96068891445307"] = { name = "Balenciaga Alien Рюкзак", chance = 0.6 },
-        ["91603290514384"] = { name = "Balenciaga Gamer Distressed Cap", chance = 0.8 },
-        ["111982024415210"] = { name = "Ebay X Balenciaga Trucker", chance = 0.2 },
-        ["18147597296"] = { name = "Balenciaga Sports Icon Distressed Cap", chance = 0.07 },
-        ["117973635335653"] = { name = "Balenciaga x Chrome Cotton Blue", chance = 0.3 },
-        ["127277375292070"] = { name = "Balenciaga x Chrome Cotton Yellow", chance = 0.25 },
-        ["85692687437028"] = { name = "Balenciaga x Chrome Cotton White", chance = 0.15 },
-        ["89723156077371"] = { name = "Balenciaga Distressed White Cap", chance = 0.5 },
-        ["104126944758670"] = { name = "Balenciaga Blue Explorer", chance = 0.5 },
-        ["81550191875286"] = { name = "Balenciaga X Under Armour Duffel", chance = 0.8 },
-        ["106641690712546"] = { name = "Balenciaga Patchwork Bag", chance = 0.3 },
-        ["119024772298896"] = { name = "Balenciaga Graffiti City White", chance = 0.06 },
-        ["71591468298793"] = { name = "Balenciaga Graffiti City Black", chance = 0.05 },
-        ["99189491919957"] = { name = "Balenciaga X Under Armour Piercing", chance = 0.09 },
-        ["99692493214274"] = { name = "Balenciaga Garment Large Tote", chance = 0.02 },
-        ["134357315882448"] = { name = "Balenciaga Black Duffel", chance = 0.003 },
-        ["119249567021092"] = { name = "Balenciaga White Duffel", chance = 0.004 },
-        ["129539513019418"] = { name = "Balenciaga Reverse Xpander Sunglasses", chance = 0.02 },
-        ["129758048256121"] = { name = "Balenciaga Butterfly Shades", chance = 0.007 },
-        ["94671579377101"] = { name = "Balenciaga Black Spike Eyewear", chance = 0.002 },
-        ["92884235090318"] = { name = "Balenciaga Red Spike Eyewear", chance = 0.01 },
-        ["76486673718873"] = { name = "Gucci Goggles", chance = 0.3 },
-        ["16344213019"] = { name = "Gucci Ophidia GG Backpack", chance = 0.015 },
-        ["16301624126"] = { name = "Gucci Savoy Small Hat Box", chance = 0.04 },
-        ["115400611080426"] = { name = "Balenciaga x Gucci Duffle", chance = 0.008 },
-        ["6803402872"] = { name = "Gucci Dionysus Bag with Bee", chance = 0.04 },
-        ["104339539451912"] = { name = "Gucci Duffel Bag Beige", chance = 0.8 },
-        ["106839053930915"] = { name = "Gucci Duffel Bag Black", chance = 0.8 },
-        ["83731330884409"] = { name = "Blumarine Очки Классик", chance = 0.007 },
-        ["77676520738963"] = { name = "Gucci Маска", chance = 0.09 },
-        ["74493965787309"] = { name = "Gucci Сумка Global", chance = 0.3 },
-        ["123152452514671"] = { name = "Gucci Angry Glasses", chance = 0.001 },
-        ["128111835687158"] = { name = "Gucci Сумка", chance = 0.4 },
-        ["100680712845143"] = { name = "Gucci Flashtrek Left", chance = 0.02 },
-        ["108881975046000"] = { name = "Gucci Flashtrek Right", chance = 0.02 },
-        ["6783142181"] = { name = "Gucci Diamond-Framed Sunglasses", chance = 0.15 },
-        ["132695427826329"] = { name = "Chrome Hearts Crosses Beanie", chance = 0.3 },
-        ["125854200114380"] = { name = "Chrome Hearts Pink Beanie", chance = 0.6 },
-        ["135279723356196"] = { name = "Chrome Hearts Purple Beanie", chance = 0.4 },
-        ["125357035013809"] = { name = "Chrome Hearts Duffle Bag", chance = 0.3 },
-        ["87874224966717"] = { name = "Chrome Hearts Zebra Leather Bag", chance = 0.01 },
-        ["98026639580728"] = { name = "Chrome Hearts Camo Grunge Leather", chance = 0.08 },
-        ["107066313514551"] = { name = "Chrome Hearts Street Dirty Leather", chance = 0.7 },
-        ["120186577797659"] = { name = "Chrome Hearts Black Glasses", chance = 0.4 },
-        ["109761541704044"] = { name = "Chrome Hearts White Glasses", chance = 0.5 },
-        ["94612984046803"] = { name = "Chrome Hearts Cross Necklace Silver", chance = 0.02 },
-        ["96209722328474"] = { name = "Chrome Hearts Cross Chain Stacked", chance = 0.003 },
-        ["108747673267074"] = { name = "Chrome Hearts Silver Bracelet", chance = 0.15 },
-        ["98077128019618"] = { name = "Moncler Logo Beanie Black", chance = 0.04 },
-        ["6847974055"] = { name = "LV Monogram Bucket Hat", chance = 0.08 },
-        ["6847979005"] = { name = "LV Monogram Cap", chance = 0.2 },
-        ["7495514829"] = { name = "LV Keepall 55 Monogram", chance = 0.002 },
-        ["6847991145"] = { name = "LV Christopher Backpack", chance = 0.001 },
-        ["6847995221"] = { name = "LV District Messenger", chance = 0.015 },
-        ["7495518344"] = { name = "LV Bumbag Monogram", chance = 0.03 },
-        ["82737430290621"] = { name = "LV Boing 747", chance = 0.001 },
-        ["90893801653709"] = { name = "ERD Классическая Кепка", chance = 0.15 },
-        ["133988893738584"] = { name = "OffWhite Рюкзак", chance = 0.015 },
-        ["5460373518"] = { name = "OffWhite Сумка", chance = 0.5 },
-        ["102784336050801"] = { name = "Off White Out Of Office", chance = 0.3 },
-        ["89818592943048"] = { name = "NeNet Берет", chance = 0.09 },
-        ["118231617266072"] = { name = "Рюкзак NeNet", chance = 0.003 },
-        ["120296789227673"] = { name = "Amiri Бриллиантовая Цепочка", chance = 0.08 },
-        ["88660799116081"] = { name = "Amiri Skeleton", chance = 0.15 },
-        ["135241025390136"] = { name = "Amiri MA-1 Голубые", chance = 0.4 },
-        ["100351258840519"] = { name = "Goyard Graffiti Рюкзак", chance = 0.5 },
-        ["78438678589037"] = { name = "Goyard Желтый Рюкзак", chance = 0.8 },
-        ["100702892962731"] = { name = "Dior Лыжная Маска", chance = 0.08 },
-        ["82508073931214"] = { name = "Dior Рюкзак", chance = 0.12 },
-        ["92420837177718"] = { name = "Maison Margiela Шарф Черный", chance = 0.2 },
-        ["95715426059863"] = { name = "Maison Margiela Тоут", chance = 0.5 },
-        ["101158083917641"] = { name = "Maison Margiela Сумка Olivie", chance = 0.001 },
-        ["104467521699761"] = { name = "Rick Owens Drkshdw Рюкзак", chance = 0.5 },
-        ["85028391876506"] = { name = "Rick Owens Цепочка", chance = 0.001 },
-        ["140525091977150"] = { name = "RayBan Meta Smart Очки", chance = 0.001 },
-        ["108914282771759"] = { name = "Burberry Очки", chance = 0.3 },
-        ["71146177247977"] = { name = "Сумка George Gina & Lucy", chance = 0.001 },
-        ["124837470634133"] = { name = "1017 Alyx 9SM Mini Tank Красный Рюкзак", chance = 0.003 },
-        ["131705692271561"] = { name = "1017 Alyx 9SM Mini Tank Рюкзак", chance = 0.7 },
-        ["120823175427702"] = { name = "Raf Simons Тоут", chance = 0.007 },
-        ["72553364992946"] = { name = "Raf Simons x Eastpak Backpack", chance = 0.004 },
-        ["84288129132005"] = { name = "ARMY x BENZO TRUCKER HAT", chance = 0.001 },
-        ["136175219569950"] = { name = "Balenciaga Runner Черно-Белые", chance = 0.001 },
-        ["109837841091755"] = { name = "Rick Owens Большие Ботинки", chance = 0.001 },
-        ["134123291764431"] = { name = "Rick Owens Tractor", chance = 0.002 },
-        ["121105827477042"] = { name = "Balenciaga Runner Черные", chance = 0.003 },
-        ["117031897089009"] = { name = "Dior B23 Белые", chance = 0.003 },
-        ["140560964765540"] = { name = "Maison Margiela Future", chance = 0.003 },
-        ["88187426598743"] = { name = "Balenciaga Track Красные", chance = 0.004 },
-        ["107470281269035"] = { name = "Balenciaga Track Faded Черные", chance = 0.005 },
-        ["128837829969207"] = { name = "Dior B22 Черные", chance = 0.004 },
-        ["111856812062327"] = { name = "Balenciaga Track Burgery", chance = 0.008 },
-        ["83139787354012"] = { name = "Rick Owens GeoBasket", chance = 0.02 },
-        ["81932153540529"] = { name = "Balenciaga Track 2", chance = 0.04 },
-        ["117040887104405"] = { name = "Maison Margiela Replica", chance = 0.04 },
-        ["133663475114410"] = { name = "Balenciaga Track Orange", chance = 0.001 },
-        ["103190071706436"] = { name = "Balenciaga Duffel White", chance = 0.004 },
-        ["138830952908268"] = { name = "Gallery Dept Кепка Paint", chance = 0.008 },
-        ["116688991245886"] = { name = "USA Сумка", chance = 0.001 },
-        ["132852801767004"] = { name = "Balenciaga Flash Track", chance = 0.001 }
-    }
+-- ============================================
+-- ПОЛНАЯ БАЗА ДАННЫХ АКСЕССУАРОВ
+-- ============================================
+local ACCESSORIES = {
+    ["14523189142"] = { name = "Maksakov Ghost", chance = 0.005 },
+    ["14615310668"] = { name = "Red Maksakov Ghost", chance = 0.08 },
+    ["14615304098"] = { name = "Pink Maksakov Ghost", chance = 0.08 },
+    ["14615307025"] = { name = "White Maksakov Ghost", chance = 0.1 },
+    ["85865866386997"] = { name = "Bape Маска", chance = 0.15 },
+    ["70765247277282"] = { name = "Baby Milo Рюкзак", chance = 0.003 },
+    ["115389802684898"] = { name = "Bape Рюкзак Camo", chance = 0.4 },
+    ["89846079310975"] = { name = "Bape Panda Shark Шапка", chance = 0.07 },
+    ["101486965390763"] = { name = "Red BAPE Tiger Backpack", chance = 0.6 },
+    ["130822108945941"] = { name = "MCM Рюкзак Красный", chance = 0.4 },
+    ["113057369240600"] = { name = "MCM Рюкзак", chance = 0.5 },
+    ["122914640223931"] = { name = "MCM Рюкзак Белый", chance = 0.6 },
+    ["116403395006931"] = { name = "MCM Рюкзак X SprayGround", chance = 0.04 },
+    ["71040675246222"] = { name = "CP Company Goggle Beanie Light Blue", chance = 0.5 },
+    ["96236164474655"] = { name = "CP Company Goggle Beanie Sail", chance = 0.3 },
+    ["84903025841942"] = { name = "CP Company Goggle Beanie Red", chance = 0.15 },
+    ["109191017280869"] = { name = "CP Company Goggle Beanie Pink", chance = 0.08 },
+    ["96068891445307"] = { name = "Balenciaga Alien Рюкзак", chance = 0.6 },
+    ["91603290514384"] = { name = "Balenciaga Gamer Distressed Cap", chance = 0.8 },
+    ["111982024415210"] = { name = "Ebay X Balenciaga Trucker", chance = 0.2 },
+    ["18147597296"] = { name = "Balenciaga Sports Icon Distressed Cap", chance = 0.07 },
+    ["117973635335653"] = { name = "Balenciaga x Chrome Cotton Blue", chance = 0.3 },
+    ["127277375292070"] = { name = "Balenciaga x Chrome Cotton Yellow", chance = 0.25 },
+    ["85692687437028"] = { name = "Balenciaga x Chrome Cotton White", chance = 0.15 },
+    ["89723156077371"] = { name = "Balenciaga Distressed White Cap", chance = 0.5 },
+    ["104126944758670"] = { name = "Balenciaga Blue Explorer", chance = 0.5 },
+    ["81550191875286"] = { name = "Balenciaga X Under Armour Duffel", chance = 0.8 },
+    ["106641690712546"] = { name = "Balenciaga Patchwork Bag", chance = 0.3 },
+    ["119024772298896"] = { name = "Balenciaga Graffiti City White", chance = 0.06 },
+    ["71591468298793"] = { name = "Balenciaga Graffiti City Black", chance = 0.05 },
+    ["99189491919957"] = { name = "Balenciaga X Under Armour Piercing", chance = 0.09 },
+    ["99692493214274"] = { name = "Balenciaga Garment Large Tote", chance = 0.02 },
+    ["134357315882448"] = { name = "Balenciaga Black Duffel", chance = 0.003 },
+    ["119249567021092"] = { name = "Balenciaga White Duffel", chance = 0.004 },
+    ["129539513019418"] = { name = "Balenciaga Reverse Xpander Sunglasses", chance = 0.02 },
+    ["129758048256121"] = { name = "Balenciaga Butterfly Shades", chance = 0.007 },
+    ["94671579377101"] = { name = "Balenciaga Black Spike Eyewear", chance = 0.002 },
+    ["92884235090318"] = { name = "Balenciaga Red Spike Eyewear", chance = 0.01 },
+    ["76486673718873"] = { name = "Gucci Goggles", chance = 0.3 },
+    ["16344213019"] = { name = "Gucci Ophidia GG Backpack", chance = 0.015 },
+    ["16301624126"] = { name = "Gucci Savoy Small Hat Box", chance = 0.04 },
+    ["115400611080426"] = { name = "Balenciaga x Gucci Duffle", chance = 0.008 },
+    ["6803402872"] = { name = "Gucci Dionysus Bag with Bee", chance = 0.04 },
+    ["104339539451912"] = { name = "Gucci Duffel Bag Beige", chance = 0.8 },
+    ["106839053930915"] = { name = "Gucci Duffel Bag Black", chance = 0.8 },
+    ["83731330884409"] = { name = "Blumarine Очки Классик", chance = 0.007 },
+    ["77676520738963"] = { name = "Gucci Маска", chance = 0.09 },
+    ["74493965787309"] = { name = "Gucci Сумка Global", chance = 0.3 },
+    ["123152452514671"] = { name = "Gucci Angry Glasses", chance = 0.001 },
+    ["128111835687158"] = { name = "Gucci Сумка", chance = 0.4 },
+    ["100680712845143"] = { name = "Gucci Flashtrek Left", chance = 0.02 },
+    ["108881975046000"] = { name = "Gucci Flashtrek Right", chance = 0.02 },
+    ["6783142181"] = { name = "Gucci Diamond-Framed Sunglasses", chance = 0.15 },
+    ["132695427826329"] = { name = "Chrome Hearts Crosses Beanie", chance = 0.3 },
+    ["125854200114380"] = { name = "Chrome Hearts Pink Beanie", chance = 0.6 },
+    ["135279723356196"] = { name = "Chrome Hearts Purple Beanie", chance = 0.4 },
+    ["125357035013809"] = { name = "Chrome Hearts Duffle Bag", chance = 0.3 },
+    ["87874224966717"] = { name = "Chrome Hearts Zebra Leather Bag", chance = 0.01 },
+    ["98026639580728"] = { name = "Chrome Hearts Camo Grunge Leather", chance = 0.08 },
+    ["107066313514551"] = { name = "Chrome Hearts Street Dirty Leather", chance = 0.7 },
+    ["120186577797659"] = { name = "Chrome Hearts Black Glasses", chance = 0.4 },
+    ["109761541704044"] = { name = "Chrome Hearts White Glasses", chance = 0.5 },
+    ["94612984046803"] = { name = "Chrome Hearts Cross Necklace Silver", chance = 0.02 },
+    ["96209722328474"] = { name = "Chrome Hearts Cross Chain Stacked", chance = 0.003 },
+    ["108747673267074"] = { name = "Chrome Hearts Silver Bracelet", chance = 0.15 },
+    ["98077128019618"] = { name = "Moncler Logo Beanie Black", chance = 0.04 },
+    ["6847974055"] = { name = "LV Monogram Bucket Hat", chance = 0.08 },
+    ["6847979005"] = { name = "LV Monogram Cap", chance = 0.2 },
+    ["7495514829"] = { name = "LV Keepall 55 Monogram", chance = 0.002 },
+    ["6847991145"] = { name = "LV Christopher Backpack", chance = 0.001 },
+    ["6847995221"] = { name = "LV District Messenger", chance = 0.015 },
+    ["7495518344"] = { name = "LV Bumbag Monogram", chance = 0.03 },
+    ["82737430290621"] = { name = "LV Boing 747", chance = 0.001 },
+    ["90893801653709"] = { name = "ERD Классическая Кепка", chance = 0.15 },
+    ["133988893738584"] = { name = "OffWhite Рюкзак", chance = 0.015 },
+    ["5460373518"] = { name = "OffWhite Сумка", chance = 0.5 },
+    ["102784336050801"] = { name = "Off White Out Of Office", chance = 0.3 },
+    ["89818592943048"] = { name = "NeNet Берет", chance = 0.09 },
+    ["118231617266072"] = { name = "Рюкзак NeNet", chance = 0.003 },
+    ["120296789227673"] = { name = "Amiri Бриллиантовая Цепочка", chance = 0.08 },
+    ["88660799116081"] = { name = "Amiri Skeleton", chance = 0.15 },
+    ["135241025390136"] = { name = "Amiri MA-1 Голубые", chance = 0.4 },
+    ["100351258840519"] = { name = "Goyard Graffiti Рюкзак", chance = 0.5 },
+    ["78438678589037"] = { name = "Goyard Желтый Рюкзак", chance = 0.8 },
+    ["100702892962731"] = { name = "Dior Лыжная Маска", chance = 0.08 },
+    ["82508073931214"] = { name = "Dior Рюкзак", chance = 0.12 },
+    ["92420837177718"] = { name = "Maison Margiela Шарф Черный", chance = 0.2 },
+    ["95715426059863"] = { name = "Maison Margiela Тоут", chance = 0.5 },
+    ["101158083917641"] = { name = "Maison Margiela Сумка Olivie", chance = 0.001 },
+    ["104467521699761"] = { name = "Rick Owens Drkshdw Рюкзак", chance = 0.5 },
+    ["85028391876506"] = { name = "Rick Owens Цепочка", chance = 0.001 },
+    ["140525091977150"] = { name = "RayBan Meta Smart Очки", chance = 0.001 },
+    ["108914282771759"] = { name = "Burberry Очки", chance = 0.3 },
+    ["71146177247977"] = { name = "Сумка George Gina & Lucy", chance = 0.001 },
+    ["124837470634133"] = { name = "1017 Alyx 9SM Mini Tank Красный Рюкзак", chance = 0.003 },
+    ["131705692271561"] = { name = "1017 Alyx 9SM Mini Tank Рюкзак", chance = 0.7 },
+    ["120823175427702"] = { name = "Raf Simons Тоут", chance = 0.007 },
+    ["72553364992946"] = { name = "Raf Simons x Eastpak Backpack", chance = 0.004 },
+    ["84288129132005"] = { name = "ARMY x BENZO TRUCKER HAT", chance = 0.001 },
+    ["136175219569950"] = { name = "Balenciaga Runner Черно-Белые", chance = 0.001 },
+    ["109837841091755"] = { name = "Rick Owens Большие Ботинки", chance = 0.001 },
+    ["134123291764431"] = { name = "Rick Owens Tractor", chance = 0.002 },
+    ["121105827477042"] = { name = "Balenciaga Runner Черные", chance = 0.003 },
+    ["117031897089009"] = { name = "Dior B23 Белые", chance = 0.003 },
+    ["140560964765540"] = { name = "Maison Margiela Future", chance = 0.003 },
+    ["88187426598743"] = { name = "Balenciaga Track Красные", chance = 0.004 },
+    ["107470281269035"] = { name = "Balenciaga Track Faded Черные", chance = 0.005 },
+    ["128837829969207"] = { name = "Dior B22 Черные", chance = 0.004 },
+    ["111856812062327"] = { name = "Balenciaga Track Burgery", chance = 0.008 },
+    ["83139787354012"] = { name = "Rick Owens GeoBasket", chance = 0.02 },
+    ["81932153540529"] = { name = "Balenciaga Track 2", chance = 0.04 },
+    ["117040887104405"] = { name = "Maison Margiela Replica", chance = 0.04 },
+    ["133663475114410"] = { name = "Balenciaga Track Orange", chance = 0.001 },
+    ["103190071706436"] = { name = "Balenciaga Duffel White", chance = 0.004 },
+    ["138830952908268"] = { name = "Gallery Dept Кепка Paint", chance = 0.008 },
+    ["116688991245886"] = { name = "USA Сумка", chance = 0.001 },
+    ["132852801767004"] = { name = "Balenciaga Flash Track", chance = 0.001 }
+}
 
-    _G.ASSETS = ASSETS
-    _G.ACCESSORIES = ACCESSORIES
+_G.ASSETS = ASSETS
+_G.ACCESSORIES = ACCESSORIES
 
-    -- Подсчет предметов
-    local assetsCount = 0
-    for _ in pairs(ASSETS) do assetsCount = assetsCount + 1 end
+-- Подсчет предметов
+local assetsCount = 0
+for _ in pairs(ASSETS) do assetsCount = assetsCount + 1 end
 
-    local accessoriesCount = 0
-    for _ in pairs(ACCESSORIES) do accessoriesCount = accessoriesCount + 1 end
+local accessoriesCount = 0
+for _ in pairs(ACCESSORIES) do accessoriesCount = accessoriesCount + 1 end
 
-    print("✅ База загружена")
-    print("📦 Вещей:", assetsCount)
-    print("👜 Аксессуаров:", accessoriesCount)
+print("✅ База загружена")
+print("📦 Вещей:", assetsCount)
+print("👜 Аксессуаров:", accessoriesCount)
 
-    -- ============================================
-    -- ESP ПЕРЕМЕННЫЕ
-    -- ============================================
-    local espEnabled = false
-    local espObjects = {}
-    local espTracking = {} -- Таблица для отслеживания объектов и их ESP
-    local tracers = {}
-    local tracerGui = nil
-    local autoBuyEnabled = false
-    local autoBuyRunning = false
-    local purchasedSlots = {} -- Таблица для отслеживания купленных слотов (по SlotId)
+-- ============================================
+-- ESP ПЕРЕМЕННЫЕ
+-- ============================================
+local espEnabled = false
+local espObjects = {}
+local espTracking = {} -- Таблица для отслеживания объектов и их ESP
+local tracers = {}
+local tracerGui = nil
+local autoBuyEnabled = false
+local autoBuyRunning = false
+local purchasedSlots = {} -- Таблица для отслеживания купленных слотов (по SlotId)
 
-    local RARITY_COLOR = Color3.fromRGB(255, 180, 0)
+local RARITY_COLOR = Color3.fromRGB(255, 180, 0)
 
-    -- ============================================
-    -- ФУНКЦИИ ПОИСКА
-    -- ============================================
-    local function getAllMannequins()
-        local results = {}
-        for _, zone in pairs(workspace:GetChildren()) do
-            if zone:IsA("Model") and zone.Name:match("Shop_ShopZone") then
-                local slots = zone:FindFirstChild("ItemSlots")
-                if slots then
-                    for _, slot in pairs(slots:GetChildren()) do
-                        if slot.Name:match("Slot_") then
-                            local mannequin = slot:FindFirstChild("Mannequin")
-                            if mannequin and mannequin:IsA("Model") then
-                                -- НОВАЯ ПРОВЕРКА: Манекен должен быть потомком workspace
-                                if not mannequin:IsDescendantOf(workspace) then
-                                    continue
-                                end
-                                
-                                local clothingData = {}
-                                local hasValidClothing = false
-                                
-                                for _, child in pairs(mannequin:GetChildren()) do
-                                    if child:IsA("Shirt") then
-                                        local id = child.ShirtTemplate:match("%d+")
-                                        clothingData.shirtId = id
-                                        -- Проверяем что это вещь из базы
-                                        if id and ASSETS[id] then
-                                            hasValidClothing = true
-                                        end
-                                    elseif child:IsA("Pants") then
-                                        local id = child.PantsTemplate:match("%d+")
-                                        clothingData.pantsId = id
-                                        -- Проверяем что это вещь из базы
-                                        if id and ASSETS[id] then
-                                            hasValidClothing = true
-                                        end
+-- ============================================
+-- ФУНКЦИИ ПОИСКА
+-- ============================================
+local function getAllMannequins()
+    local results = {}
+    for _, zone in pairs(workspace:GetChildren()) do
+        if zone:IsA("Model") and zone.Name:match("Shop_ShopZone") then
+            local slots = zone:FindFirstChild("ItemSlots")
+            if slots then
+                for _, slot in pairs(slots:GetChildren()) do
+                    if slot.Name:match("Slot_") then
+                        local mannequin = slot:FindFirstChild("Mannequin")
+                        if mannequin and mannequin:IsA("Model") then
+                            -- НОВАЯ ПРОВЕРКА: Манекен должен быть потомком workspace
+                            if not mannequin:IsDescendantOf(workspace) then
+                                continue
+                            end
+                            
+                            local clothingData = {}
+                            local hasValidClothing = false
+                            
+                            for _, child in pairs(mannequin:GetChildren()) do
+                                if child:IsA("Shirt") then
+                                    local id = child.ShirtTemplate:match("%d+")
+                                    clothingData.shirtId = id
+                                    -- Проверяем что это вещь из базы
+                                    if id and ASSETS[id] then
+                                        hasValidClothing = true
+                                    end
+                                elseif child:IsA("Pants") then
+                                    local id = child.PantsTemplate:match("%d+")
+                                    clothingData.pantsId = id
+                                    -- Проверяем что это вещь из базы
+                                    if id and ASSETS[id] then
+                                        hasValidClothing = true
                                     end
                                 end
-                                
-                                -- Добавляем только если нашли валидную одежду из базы
-                                if hasValidClothing and (clothingData.shirtId or clothingData.pantsId) then
-                                    table.insert(results, {
-                                        mannequin = mannequin,
-                                        clothingData = clothingData,
-                                        slot = slot
-                                    })
-                                end
                             end
-                        end
-                    end
-                end
-            end
-        end
-        return results
-    end
-
-    local function getAllAccessories()
-        local results = {}
-        for _, zone in pairs(workspace:GetChildren()) do
-            if zone:IsA("Model") and zone.Name:match("Shop_ShopZone") then
-                for _, child in pairs(zone:GetChildren()) do
-                    if child:IsA("Model") and child.Name:match("^M_") then
-                        -- НОВАЯ ПРОВЕРКА: Модель должна быть в workspace
-                        if not child:IsDescendantOf(workspace) then
-                            continue
-                        end
-                        
-                        local target = child:FindFirstChild("Handle") or child:FindFirstChild("Body")
-                        if target and target:IsA("MeshPart") and target.MeshId then
-                            local id = target.MeshId:match("%d+")
-                            -- Проверяем что это аксессуар из базы
-                            if id and ACCESSORIES[id] then
+                            
+                            -- Добавляем только если нашли валидную одежду из базы
+                            if hasValidClothing and (clothingData.shirtId or clothingData.pantsId) then
                                 table.insert(results, {
-                                    model = child,
-                                    meshId = id
+                                    mannequin = mannequin,
+                                    clothingData = clothingData,
+                                    slot = slot
                                 })
                             end
                         end
@@ -352,1444 +322,1446 @@
                 end
             end
         end
-        return results
     end
+    return results
+end
 
-    -- ============================================
-    -- ВИЗУАЛИЗАЦИЯ
-    -- ============================================
-    local function createHighlight(model)
-        if model:FindFirstChild("ESP_H") then return end
-        
-        local h = Instance.new("Highlight")
-        h.Name = "ESP_H"
-        h.Adornee = model
-        h.FillColor = RARITY_COLOR
-        h.OutlineColor = RARITY_COLOR
-        h.FillTransparency = 0.5
-        h.OutlineTransparency = 0
-        h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        h.Parent = model
-        table.insert(espObjects, h)
-    end
-
-    local function createLabel(model, text)
-        if model:FindFirstChild("ESP_L") then 
-            local existingGui = model:FindFirstChild("ESP_L")
-            if existingGui then
-                return existingGui
+local function getAllAccessories()
+    local results = {}
+    for _, zone in pairs(workspace:GetChildren()) do
+        if zone:IsA("Model") and zone.Name:match("Shop_ShopZone") then
+            for _, child in pairs(zone:GetChildren()) do
+                if child:IsA("Model") and child.Name:match("^M_") then
+                    -- НОВАЯ ПРОВЕРКА: Модель должна быть в workspace
+                    if not child:IsDescendantOf(workspace) then
+                        continue
+                    end
+                    
+                    local target = child:FindFirstChild("Handle") or child:FindFirstChild("Body")
+                    if target and target:IsA("MeshPart") and target.MeshId then
+                        local id = target.MeshId:match("%d+")
+                        -- Проверяем что это аксессуар из базы
+                        if id and ACCESSORIES[id] then
+                            table.insert(results, {
+                                model = child,
+                                meshId = id
+                            })
+                        end
+                    end
+                end
             end
         end
-        
-        local gui = Instance.new("BillboardGui")
-        gui.Name = "ESP_L"
-        gui.Adornee = model
-        gui.Size = UDim2.new(0, 200, 0, 40)
-        gui.StudsOffset = Vector3.new(0, 3, 0)
-        gui.AlwaysOnTop = true
-        gui.Parent = player:WaitForChild("PlayerGui")
-        
-        local label = Instance.new("TextLabel")
-        label.Name = "ESP_Text" -- Добавляем имя для легкого поиска
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        label.BackgroundTransparency = 0.3
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.Font = Enum.Font.SourceSansBold
-        label.TextSize = 14
-        label.Text = text
-        label.Parent = gui
-        
-        table.insert(espObjects, gui)
-        return gui
     end
+    return results
+end
 
-    -- ============================================
-    -- ESP УПРАВЛЕНИЕ
-    -- ============================================
+-- ============================================
+-- ВИЗУАЛИЗАЦИЯ
+-- ============================================
+local function createHighlight(model)
+    if model:FindFirstChild("ESP_H") then return end
+    
+    local h = Instance.new("Highlight")
+    h.Name = "ESP_H"
+    h.Adornee = model
+    h.FillColor = RARITY_COLOR
+    h.OutlineColor = RARITY_COLOR
+    h.FillTransparency = 0.5
+    h.OutlineTransparency = 0
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = model
+    table.insert(espObjects, h)
+end
 
-    local function clearESP()
-        for _, obj in pairs(espObjects) do
-            if obj and obj.Parent then
-                obj:Destroy()
-            end
-        end
-        espObjects = {}
-        espTracking = {}
-    end
-
-    -- Функция для принудительного удаления ESP
-    local function forceRemoveESP(model, reason)
-        if not espTracking[model] then return end
-        
-        local espData = espTracking[model]
-        local itemName = ""
-        
-        if espData.label and espData.label:IsA("BillboardGui") then
-            local label = espData.label:FindFirstChild("ESP_Text")
-            if label and label:IsA("TextLabel") then
-                itemName = label.Text
-            end
-        end
-        
-        pcall(function()
-            if espData.highlight and espData.highlight.Parent then
-                espData.highlight:Destroy()
-            end
-        end)
-        pcall(function()
-            if espData.label and espData.label.Parent then
-                espData.label:Destroy()
-            end
-        end)
-        
-        espTracking[model] = nil
-        
-        if itemName ~= "" then
-            print("🗑️ ESP удален (" .. reason .. "):", itemName)
+local function createLabel(model, text)
+    if model:FindFirstChild("ESP_L") then 
+        local existingGui = model:FindFirstChild("ESP_L")
+        if existingGui then
+            return existingGui
         end
     end
+    
+    local gui = Instance.new("BillboardGui")
+    gui.Name = "ESP_L"
+    gui.Adornee = model
+    gui.Size = UDim2.new(0, 200, 0, 40)
+    gui.StudsOffset = Vector3.new(0, 3, 0)
+    gui.AlwaysOnTop = true
+    gui.Parent = player:WaitForChild("PlayerGui")
+    
+    local label = Instance.new("TextLabel")
+    label.Name = "ESP_Text" -- Добавляем имя для легкого поиска
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    label.BackgroundTransparency = 0.3
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 14
+    label.Text = text
+    label.Parent = gui
+    
+    table.insert(espObjects, gui)
+    return gui
+end
 
-    local function updateESP()
-        -- Создаем список для удаления (чтобы избежать изменения таблицы во время итерации)
-        local toRemove = {}
+-- ============================================
+-- ESP УПРАВЛЕНИЕ
+-- ============================================
+
+local function clearESP()
+    for _, obj in pairs(espObjects) do
+        if obj and obj.Parent then
+            obj:Destroy()
+        end
+    end
+    espObjects = {}
+    espTracking = {}
+end
+
+-- Функция для принудительного удаления ESP
+local function forceRemoveESP(model, reason)
+    if not espTracking[model] then return end
+    
+    local espData = espTracking[model]
+    local itemName = ""
+    
+    if espData.label and espData.label:IsA("BillboardGui") then
+        local label = espData.label:FindFirstChild("ESP_Text")
+        if label and label:IsA("TextLabel") then
+            itemName = label.Text
+        end
+    end
+    
+    pcall(function()
+        if espData.highlight and espData.highlight.Parent then
+            espData.highlight:Destroy()
+        end
+    end)
+    pcall(function()
+        if espData.label and espData.label.Parent then
+            espData.label:Destroy()
+        end
+    end)
+    
+    espTracking[model] = nil
+    
+    if itemName ~= "" then
+        print("🗑️ ESP удален (" .. reason .. "):", itemName)
+    end
+end
+
+local function updateESP()
+    -- Создаем список для удаления (чтобы избежать изменения таблицы во время итерации)
+    local toRemove = {}
+    
+    for model, espData in pairs(espTracking) do
+        local shouldRemove = false
+        local removeReason = ""
         
-        for model, espData in pairs(espTracking) do
-            local shouldRemove = false
-            local removeReason = ""
-            
-            -- Проверка 1: Модель существует в workspace?
-            if not model or not model.Parent then
+        -- Проверка 1: Модель существует в workspace?
+        if not model or not model.Parent then
+            shouldRemove = true
+            removeReason = "модель удалена"
+        end
+        
+        -- Проверка 2: Модель все еще потомок workspace?
+        if not shouldRemove then
+            local success = pcall(function()
+                if not model:IsDescendantOf(workspace) then
+                    shouldRemove = true
+                    removeReason = "модель не в workspace"
+                end
+            end)
+            if not success then
                 shouldRemove = true
-                removeReason = "модель удалена"
+                removeReason = "ошибка проверки модели"
             end
-            
-            -- Проверка 2: Модель все еще потомок workspace?
-            if not shouldRemove then
+        end
+        
+        -- Проверка 3: Слот существует? (для вещей)
+        if not shouldRemove and espData.slot then
+            if not espData.slot.Parent then
+                shouldRemove = true
+                removeReason = "слот удален"
+            else
                 local success = pcall(function()
-                    if not model:IsDescendantOf(workspace) then
+                    if not espData.slot:IsDescendantOf(workspace) then
                         shouldRemove = true
-                        removeReason = "модель не в workspace"
+                        removeReason = "слот не в workspace"
                     end
                 end)
                 if not success then
                     shouldRemove = true
-                    removeReason = "ошибка проверки модели"
+                    removeReason = "ошибка проверки слота"
+                end
+                
+                if not shouldRemove then
+                    -- Проверяем что манекен все еще в слоте
+                    local mannequinInSlot = espData.slot:FindFirstChild("Mannequin")
+                    if not mannequinInSlot then
+                        shouldRemove = true
+                        removeReason = "манекен удален из слота"
+                    elseif mannequinInSlot ~= model then
+                        shouldRemove = true
+                        removeReason = "другой манекен в слоте"
+                    end
                 end
             end
+        end
+        
+        -- Проверка 4: Для манекенов - есть ли еще одежда из базы?
+        if not shouldRemove and model:IsA("Model") and model.Name == "Mannequin" then
+            local hasTargetClothing = false
+            local success = pcall(function()
+                for _, child in pairs(model:GetChildren()) do
+                    if child:IsA("Shirt") then
+                        local id = child.ShirtTemplate:match("%d+")
+                        if id and ASSETS[id] then
+                            hasTargetClothing = true
+                            break
+                        end
+                    elseif child:IsA("Pants") then
+                        local id = child.PantsTemplate:match("%d+")
+                        if id and ASSETS[id] then
+                            hasTargetClothing = true
+                            break
+                        end
+                    end
+                end
+            end)
             
-            -- Проверка 3: Слот существует? (для вещей)
-            if not shouldRemove and espData.slot then
-                if not espData.slot.Parent then
+            if not success or not hasTargetClothing then
+                shouldRemove = true
+                removeReason = "одежда пропала с манекена"
+            end
+        end
+        
+        -- Проверка 5: Для аксессуаров - существует ли Handle/Body с нужным MeshId?
+        if not shouldRemove and model:IsA("Model") and model.Name:match("^M_") then
+            local success = pcall(function()
+                local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
+                if not target or not target:IsA("MeshPart") then
                     shouldRemove = true
-                    removeReason = "слот удален"
+                    removeReason = "Handle/Body удален"
                 else
-                    local success = pcall(function()
-                        if not espData.slot:IsDescendantOf(workspace) then
-                            shouldRemove = true
-                            removeReason = "слот не в workspace"
+                    local meshId = target.MeshId:match("%d+")
+                    if not meshId or not ACCESSORIES[meshId] then
+                        shouldRemove = true
+                        removeReason = "MeshId изменен или удален"
+                    end
+                end
+            end)
+            
+            if not success then
+                shouldRemove = true
+                removeReason = "ошибка проверки аксессуара"
+            end
+        end
+        
+        -- Проверка 6: ESP элементы существуют?
+        if not shouldRemove then
+            if espData.highlight and not pcall(function() return espData.highlight.Parent end) then
+                shouldRemove = true
+                removeReason = "highlight поврежден"
+            end
+            if espData.label and not pcall(function() return espData.label.Parent end) then
+                shouldRemove = true
+                removeReason = "label поврежден"
+            end
+        end
+        
+        if shouldRemove then
+            table.insert(toRemove, {model = model, reason = removeReason})
+        end
+    end
+    
+    -- Удаляем все помеченные ESP
+    for _, data in ipairs(toRemove) do
+        forceRemoveESP(data.model, data.reason)
+    end
+end
+
+local function enableESP()
+    if espEnabled then return end
+    espEnabled = true
+    
+    clearESP()
+    
+    local found = 0
+    
+    -- Вещи
+    for _, data in pairs(getAllMannequins()) do
+        local names = {}
+        if data.clothingData.shirtId then
+            local item = ASSETS[data.clothingData.shirtId]
+            if item then
+                table.insert(names, item.name)
+            end
+        end
+        if data.clothingData.pantsId then
+            local item = ASSETS[data.clothingData.pantsId]
+            if item then
+                table.insert(names, item.name)
+            end
+        end
+        
+        if #names > 0 then
+            local highlight = createHighlight(data.mannequin)
+            local label = createLabel(data.mannequin, table.concat(names, " + "))
+            espTracking[data.mannequin] = {
+                highlight = data.mannequin:FindFirstChild("ESP_H"),
+                label = label,
+                slot = data.slot, -- Сохраняем ссылку на слот
+                itemType = "clothing"
+            }
+            found = found + 1
+        end
+    end
+    
+    -- Аксессуары
+    for _, data in pairs(getAllAccessories()) do
+        local item = ACCESSORIES[data.meshId]
+        if item then
+            local highlight = createHighlight(data.model)
+            local label = createLabel(data.model, item.name)
+            espTracking[data.model] = {
+                highlight = data.model:FindFirstChild("ESP_H"),
+                label = label,
+                itemType = "accessory"
+            }
+            found = found + 1
+        end
+    end
+    
+    -- Запускаем автоматическое обновление ESP
+    task.spawn(function()
+        while espEnabled do
+            updateESP()
+            task.wait(0.15) -- Проверяем каждые 0.15 секунды (быстрее реагирует)
+        end
+    end)
+    
+    -- Добавляем слушателя на удаление объектов для мгновенной реакции
+    for model, trackData in pairs(espTracking) do
+        if model and model.Parent then
+            -- Следим за удалением модели
+            model.AncestryChanged:Connect(function(_, parent)
+                if parent == nil or not model:IsDescendantOf(workspace) then
+                    -- Модель удалена из Workspace - мгновенно обновляем
+                    task.wait(0.05)
+                    updateESP()
+                end
+            end)
+            
+            -- Следим за удалением одежды у манекенов
+            if model:IsA("Model") and model.Name == "Mannequin" then
+                -- Следим за существующей одеждой
+                for _, child in pairs(model:GetChildren()) do
+                    if child:IsA("Shirt") or child:IsA("Pants") then
+                        local clothingId = nil
+                        if child:IsA("Shirt") then
+                            clothingId = child.ShirtTemplate:match("%d+")
+                        else
+                            clothingId = child.PantsTemplate:match("%d+")
+                        end
+                        
+                        -- Только для одежды из нашей базы
+                        if clothingId and ASSETS[clothingId] then
+                            child.AncestryChanged:Connect(function(_, parent)
+                                if parent == nil or not child:IsDescendantOf(model) then
+                                    -- Одежда удалена - мгновенно обновляем
+                                    task.wait(0.05)
+                                    updateESP()
+                                end
+                            end)
+                            
+                            -- Следим за изменением Template (если вещь заменили)
+                            child:GetPropertyChangedSignal("ShirtTemplate"):Connect(function()
+                                task.wait(0.05)
+                                updateESP()
+                            end)
+                            if child:IsA("Pants") then
+                                child:GetPropertyChangedSignal("PantsTemplate"):Connect(function()
+                                    task.wait(0.05)
+                                    updateESP()
+                                end)
+                            end
+                        end
+                    end
+                end
+                
+                -- Следим за добавлением новых детей (вдруг одежда появилась)
+                model.ChildRemoved:Connect(function(child)
+                    if child:IsA("Shirt") or child:IsA("Pants") then
+                        task.wait(0.05)
+                        updateESP()
+                    end
+                end)
+            end
+            
+            -- Следим за аксессуарами
+            if model:IsA("Model") and model.Name:match("^M_") then
+                local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
+                if target then
+                    target.AncestryChanged:Connect(function(_, parent)
+                        if parent == nil or not target:IsDescendantOf(model) then
+                            task.wait(0.05)
+                            updateESP()
                         end
                     end)
-                    if not success then
-                        shouldRemove = true
-                        removeReason = "ошибка проверки слота"
-                    end
-                    
-                    if not shouldRemove then
-                        -- Проверяем что манекен все еще в слоте
-                        local mannequinInSlot = espData.slot:FindFirstChild("Mannequin")
-                        if not mannequinInSlot then
-                            shouldRemove = true
-                            removeReason = "манекен удален из слота"
-                        elseif mannequinInSlot ~= model then
-                            shouldRemove = true
-                            removeReason = "другой манекен в слоте"
-                        end
-                    end
                 end
             end
             
-            -- Проверка 4: Для манекенов - есть ли еще одежда из базы И она та же самая?
-            if not shouldRemove and model:IsA("Model") and model.Name == "Mannequin" then
-                local hasTargetClothing = false
-                local clothingMatches = true -- НОВОЕ: Проверяем что ID не изменились
-                
-                local success = pcall(function()
-                    local currentShirtId = nil
-                    local currentPantsId = nil
-                    
-                    for _, child in pairs(model:GetChildren()) do
-                        if child:IsA("Shirt") then
-                            currentShirtId = child.ShirtTemplate:match("%d+")
-                            if currentShirtId and ASSETS[currentShirtId] then
-                                hasTargetClothing = true
-                            end
-                        elseif child:IsA("Pants") then
-                            currentPantsId = child.PantsTemplate:match("%d+")
-                            if currentPantsId and ASSETS[currentPantsId] then
-                                hasTargetClothing = true
-                            end
-                        end
-                    end
-                    
-                    -- НОВОЕ: Проверяем что ID одежды не изменились
-                    if espData.originalClothingIds then
-                        if espData.originalClothingIds.shirtId then
-                            if currentShirtId ~= espData.originalClothingIds.shirtId then
-                                clothingMatches = false
-                            end
-                        end
-                        if espData.originalClothingIds.pantsId then
-                            if currentPantsId ~= espData.originalClothingIds.pantsId then
-                                clothingMatches = false
-                            end
-                        end
-                    end
-                end)
-                
-                if not success or not hasTargetClothing or not clothingMatches then
-                    shouldRemove = true
-                    if not clothingMatches then
-                        removeReason = "одежда изменилась (другая вещь)"
-                    else
-                        removeReason = "одежда пропала с манекена"
-                    end
-                end
-            end
-            
-            -- Проверка 5: Для аксессуаров - существует ли Handle/Body с нужным MeshId И тот же ли это ID?
-            if not shouldRemove and model:IsA("Model") and model.Name:match("^M_") then
-                local success = pcall(function()
-                    local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
-                    if not target or not target:IsA("MeshPart") then
-                        shouldRemove = true
-                        removeReason = "Handle/Body удален"
-                    else
-                        local meshId = target.MeshId:match("%d+")
-                        if not meshId or not ACCESSORIES[meshId] then
-                            shouldRemove = true
-                            removeReason = "MeshId изменен или удален"
-                        -- НОВОЕ: Проверяем что MeshId не изменился
-                        elseif espData.originalMeshId and meshId ~= espData.originalMeshId then
-                            shouldRemove = true
-                            removeReason = "MeshId изменился (другой предмет)"
-                        end
-                    end
-                end)
-                
-                if not success then
-                    shouldRemove = true
-                    removeReason = "ошибка проверки аксессуара"
-                end
-            end
-            
-            -- Проверка 6: ESP элементы существуют?
-            if not shouldRemove then
-                if espData.highlight and not pcall(function() return espData.highlight.Parent end) then
-                    shouldRemove = true
-                    removeReason = "highlight поврежден"
-                end
-                if espData.label and not pcall(function() return espData.label.Parent end) then
-                    shouldRemove = true
-                    removeReason = "label поврежден"
-                end
-            end
-            
-            if shouldRemove then
-                table.insert(toRemove, {model = model, reason = removeReason})
-            end
-        end
-        
-        -- Удаляем все помеченные ESP
-        for _, data in ipairs(toRemove) do
-            forceRemoveESP(data.model, data.reason)
-        end
-    end
-
-    _G.enableESP = function()
-        if espEnabled then return end
-        espEnabled = true
-        
-        clearESP()
-        
-        local found = 0
-        
-        -- Вещи
-        for _, data in pairs(getAllMannequins()) do
-            local names = {}
-            local clothingIds = {} -- Сохраняем ID для последующей проверки
-            
-            if data.clothingData.shirtId then
-                local item = ASSETS[data.clothingData.shirtId]
-                if item then
-                    table.insert(names, item.name)
-                    clothingIds.shirtId = data.clothingData.shirtId
-                end
-            end
-            if data.clothingData.pantsId then
-                local item = ASSETS[data.clothingData.pantsId]
-                if item then
-                    table.insert(names, item.name)
-                    clothingIds.pantsId = data.clothingData.pantsId
-                end
-            end
-            
-            if #names > 0 then
-                local highlight = createHighlight(data.mannequin)
-                local label = createLabel(data.mannequin, table.concat(names, " + "))
-                espTracking[data.mannequin] = {
-                    highlight = data.mannequin:FindFirstChild("ESP_H"),
-                    label = label,
-                    slot = data.slot, -- Сохраняем ссылку на слот
-                    itemType = "clothing",
-                    originalClothingIds = clothingIds -- НОВОЕ: Сохраняем оригинальные ID
-                }
-                found = found + 1
-            end
-        end
-        
-        -- Аксессуары
-        for _, data in pairs(getAllAccessories()) do
-            local item = ACCESSORIES[data.meshId]
-            if item then
-                local highlight = createHighlight(data.model)
-                local label = createLabel(data.model, item.name)
-                espTracking[data.model] = {
-                    highlight = data.model:FindFirstChild("ESP_H"),
-                    label = label,
-                    itemType = "accessory",
-                    originalMeshId = data.meshId -- НОВОЕ: Сохраняем оригинальный MeshId
-                }
-                found = found + 1
-            end
-        end
-        
-        -- Запускаем автоматическое обновление ESP
-        task.spawn(function()
-            while espEnabled do
-                updateESP()
-                task.wait(0.1) -- Проверяем каждые 0.1 секунды для быстрого удаления ESP
-            end
-        end)
-        
-        -- Добавляем слушателя на удаление объектов для мгновенной реакции
-        for model, trackData in pairs(espTracking) do
-            if model and model.Parent then
-                -- Следим за удалением модели
-                model.AncestryChanged:Connect(function(_, parent)
-                    if parent == nil or not model:IsDescendantOf(workspace) then
-                        -- Модель удалена из Workspace - мгновенно обновляем
+            -- Следим за слотом (для вещей)
+            if trackData.slot and trackData.slot.Parent then
+                trackData.slot.AncestryChanged:Connect(function(_, parent)
+                    if parent == nil or not trackData.slot:IsDescendantOf(workspace) then
+                        -- Слот удален - мгновенно обновляем
                         task.wait(0.05)
                         updateESP()
                     end
                 end)
                 
-                -- Следим за удалением одежды у манекенов
-                if model:IsA("Model") and model.Name == "Mannequin" then
-                    -- Следим за существующей одеждой
-                    for _, child in pairs(model:GetChildren()) do
-                        if child:IsA("Shirt") or child:IsA("Pants") then
-                            local clothingId = nil
-                            if child:IsA("Shirt") then
-                                clothingId = child.ShirtTemplate:match("%d+")
-                            else
-                                clothingId = child.PantsTemplate:match("%d+")
-                            end
-                            
-                            -- Только для одежды из нашей базы
-                            if clothingId and ASSETS[clothingId] then
-                                child.AncestryChanged:Connect(function(_, parent)
-                                    if parent == nil or not child:IsDescendantOf(model) then
-                                        -- Одежда удалена - мгновенно обновляем
-                                        task.wait(0.05)
-                                        updateESP()
-                                    end
-                                end)
-                                
-                                -- Следим за изменением Template (если вещь заменили)
-                                child:GetPropertyChangedSignal("ShirtTemplate"):Connect(function()
-                                    task.wait(0.05)
-                                    updateESP()
-                                end)
-                                if child:IsA("Pants") then
-                                    child:GetPropertyChangedSignal("PantsTemplate"):Connect(function()
-                                        task.wait(0.05)
-                                        updateESP()
-                                    end)
-                                end
-                            end
-                        end
-                    end
-                    
-                    -- Следим за добавлением новых детей (вдруг одежда появилась)
-                    model.ChildRemoved:Connect(function(child)
-                        if child:IsA("Shirt") or child:IsA("Pants") then
-                            task.wait(0.05)
-                            updateESP()
-                        end
-                    end)
-                end
-                
-                -- Следим за аксессуарами
-                if model:IsA("Model") and model.Name:match("^M_") then
-                    local target = model:FindFirstChild("Handle") or model:FindFirstChild("Body")
-                    if target then
-                        target.AncestryChanged:Connect(function(_, parent)
-                            if parent == nil or not target:IsDescendantOf(model) then
-                                task.wait(0.05)
-                                updateESP()
-                            end
-                        end)
-                    end
-                end
-                
-                -- Следим за слотом (для вещей)
-                if trackData.slot and trackData.slot.Parent then
-                    trackData.slot.AncestryChanged:Connect(function(_, parent)
-                        if parent == nil or not trackData.slot:IsDescendantOf(workspace) then
-                            -- Слот удален - мгновенно обновляем
-                            task.wait(0.05)
-                            updateESP()
-                        end
-                    end)
-                    
-                    -- Следим за изменением детей слота (манекен может быть заменен)
-                    trackData.slot.ChildRemoved:Connect(function(child)
-                        if child == model or child.Name == "Mannequin" then
-                            task.wait(0.05)
-                            updateESP()
-                        end
-                    end)
-                end
-            end
-        end
-        
-        print("✅ ESP включен! Найдено:", found)
-    end
-
-    _G.disableESP = function()
-        espEnabled = false
-        clearESP()
-        print("❌ ESP выключен")
-    end
-
-    -- ============================================
-    -- АВТОБАЙ ФУНКЦИИ
-    -- ============================================
-
-    -- Получить баланс игрока
-    local function getPlayerMoney()
-        -- Пробуем разные варианты получения денег
-        local money = 0
-        
-        -- Вариант 1: Leaderstats
-        pcall(function()
-            local leaderstats = player:FindFirstChild("leaderstats")
-            if leaderstats then
-                local cash = leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins")
-                if cash and cash.Value then
-                    money = cash.Value
-                end
-            end
-        end)
-        
-        -- Вариант 2: PlayerGui
-        if money == 0 then
-            pcall(function()
-                local playerGui = player:WaitForChild("PlayerGui", 1)
-                for _, gui in pairs(playerGui:GetDescendants()) do
-                    if gui:IsA("TextLabel") and gui.Name:lower():find("cash") or gui.Name:lower():find("money") then
-                        local text = gui.Text
-                        local amount = text:match("%d+")
-                        if amount then
-                            money = tonumber(amount) or 0
-                        end
-                    end
-                end
-            end)
-        end
-        
-        return money
-    end
-
-    -- Получить цену предмета из слота
-    local function getItemPrice(slot)
-        -- Пробуем найти цену в слоте
-        local price = 0
-        
-        pcall(function()
-            -- Вариант 1: Атрибут Price
-            if slot:GetAttribute("Price") then
-                price = slot:GetAttribute("Price")
-            end
-            
-            -- Вариант 2: StringValue или NumberValue с именем Price
-            if price == 0 then
-                local priceValue = slot:FindFirstChild("Price") or slot:FindFirstChild("price")
-                if priceValue and (priceValue:IsA("NumberValue") or priceValue:IsA("IntValue")) then
-                    price = priceValue.Value
-                elseif priceValue and priceValue:IsA("StringValue") then
-                    local amount = priceValue.Value:match("%d+")
-                    if amount then
-                        price = tonumber(amount)
-                    end
-                end
-            end
-            
-            -- Вариант 3: Ищем в Configuration
-            if price == 0 then
-                for _, child in pairs(slot:GetDescendants()) do
-                    if child.Name:lower():find("price") then
-                        if child:IsA("NumberValue") or child:IsA("IntValue") then
-                            price = child.Value
-                        elseif child:IsA("StringValue") then
-                            local amount = child.Value:match("%d+")
-                            if amount then
-                                price = tonumber(amount)
-                            end
-                        end
-                    end
-                end
-            end
-            
-            -- Вариант 4: Ищем TextLabel с ценой рядом
-            if price == 0 then
-                for _, desc in pairs(slot:GetDescendants()) do
-                    if desc:IsA("TextLabel") or desc:IsA("BillboardGui") then
-                        local text = ""
-                        if desc:IsA("TextLabel") then
-                            text = desc.Text
-                        else
-                            local label = desc:FindFirstChildOfClass("TextLabel")
-                            if label then
-                                text = label.Text
-                            end
-                        end
-                        
-                        -- Ищем паттерн цены: $123, 123$, Cash: 123, и т.д.
-                        local amount = text:match("%$%s*(%d+)") or text:match("(%d+)%s*%$") or text:match("Cash:%s*(%d+)")
-                        if amount then
-                            price = tonumber(amount)
-                            break
-                        end
-                    end
-                end
-            end
-        end)
-        
-        return price
-    end
-
-    -- Найти NPC в зоне
-    local function findNPCInZone(zoneName)
-        local zone = workspace:FindFirstChild(zoneName)
-        if not zone then return nil end
-        
-        for _, child in pairs(zone:GetDescendants()) do
-            if child:IsA("Model") and child.Name:lower():find("npc") then
-                local humanoidRootPart = child:FindFirstChild("HumanoidRootPart")
-                if humanoidRootPart then
-                    return humanoidRootPart
-                end
-            end
-        end
-        return nil
-    end
-
-    -- Получить SlotId из Slot
-    local function getSlotId(slot)
-        -- Слот может иметь разные структуры, пробуем все варианты
-        
-        -- Вариант 1: SlotId хранится в атрибуте
-        if slot:GetAttribute("SlotId") then
-            return slot:GetAttribute("SlotId")
-        end
-        
-        -- Вариант 2: SlotId в StringValue или подобном
-        local slotIdValue = slot:FindFirstChild("SlotId") or slot:FindFirstChild("slotId") or slot:FindFirstChild("ID")
-        if slotIdValue and slotIdValue:IsA("StringValue") then
-            return slotIdValue.Value
-        end
-        
-        -- Вариант 3: Имя слота содержит полный SlotId (например "Slot_5587_114582")
-        if slot.Name:match("Slot_%d+_%d+") then
-            return slot.Name
-        end
-        
-        -- Вариант 4: Имя слота это только "Slot_X", ищем Configuration или другие данные
-        for _, child in pairs(slot:GetChildren()) do
-            if child:IsA("Configuration") or child.Name == "Data" or child.Name == "Info" then
-                for _, subChild in pairs(child:GetChildren()) do
-                    if subChild.Name:lower():find("slot") and subChild:IsA("StringValue") then
-                        return subChild.Value
-                    end
-                end
-            end
-        end
-        
-        -- Вариант 5: Проверяем все StringValue в слоте
-        for _, child in pairs(slot:GetDescendants()) do
-            if child:IsA("StringValue") and child.Value:match("SLOT_%d+_%d+") then
-                return child.Value
-            end
-        end
-        
-        -- Если ничего не нашли, выводим структуру слота для отладки
-        print("⚠️ Не удалось найти SlotId. Структура слота:")
-        print("  Имя:", slot.Name)
-        print("  Дети:")
-        for _, child in pairs(slot:GetChildren()) do
-            print("    -", child.Name, child.ClassName)
-            if child:IsA("StringValue") or child:IsA("IntValue") or child:IsA("NumberValue") then
-                print("      Значение:", child.Value)
-            end
-        end
-        print("  Атрибуты:")
-        for attr, value in pairs(slot:GetAttributes()) do
-            print("    -", attr, "=", value)
-        end
-        
-        -- В крайнем случае возвращаем имя слота
-        return slot.Name
-    end
-
-    -- ============================================
-    -- БЕЗОПАСНЫЙ ТЕЛЕПОРТ С ОБХОДОМ АНТИЧИТА
-    -- ============================================
-    -- Используем TweenService для МАКСИМАЛЬНО плавного перемещения
-    -- Античит видит это как обычное движение персонажа
-
-    local activeTween = nil -- Храним активный твин для отмены
-
-    -- УЛУЧШЕННЫЙ ОБХОД: Телепорт с имитацией человеческого движения
-    local function advancedSafeTeleport(startCF, endCF, distance)
-        local character = player.Character
-        if not character then return false end
-        
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        
-        -- Отменяем предыдущий твин если есть
-        if activeTween then
-            activeTween:Cancel()
-            activeTween = nil
-        end
-        
-        -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию персонажа
-        local currentLookVector = startCF.LookVector
-        
-        -- Вычисляем безопасную скорость (оптимизированная)
-        local maxSpeed = 25 -- Скорость для обхода детекта (чуть быстрее)
-        local calculatedDuration = distance / maxSpeed
-        
-        -- Минимум для небольших расстояний
-        local safeDuration = math.max(calculatedDuration, 1.0)
-        
-        -- Для очень больших расстояний добавляем немного времени
-        if distance > 120 then
-            safeDuration = math.max(safeDuration, 2.0)
-        end
-        
-        print("🛡️ Безопасный телепорт:", math.floor(distance), "стадов за", string.format("%.1f", safeDuration), "сек")
-        print("⚡ Скорость:", string.format("%.1f", distance/safeDuration), "стадов/сек")
-        
-        -- Разбиваем на несколько сегментов для имитации человеческого движения
-        local segments = math.max(2, math.floor(distance / 30)) -- Каждые 30 стадов = новый сегмент
-        local segmentDuration = safeDuration / segments
-        
-        for i = 1, segments do
-            local startProgress = (i - 1) / segments
-            local endProgress = i / segments
-            
-            -- Добавляем небольшое случайное отклонение для имитации человека
-            local randomOffset = Vector3.new(
-                math.random(-100, 100) / 100, -- ±1 стад по X
-                0,
-                math.random(-100, 100) / 100  -- ±1 стад по Z
-            )
-            
-            local segmentStart = startCF.Position:Lerp(endCF.Position, startProgress)
-            local segmentEnd = startCF.Position:Lerp(endCF.Position, endProgress)
-            
-            -- Только последний сегмент идет точно в цель, остальные с отклонением
-            if i < segments then
-                segmentEnd = segmentEnd + randomOffset
-            end
-            
-            -- ИСПРАВЛЕНИЕ: Создаем CFrame с сохранением направления взгляда
-            local segmentStartCF = CFrame.new(segmentStart, segmentStart + currentLookVector)
-            local segmentEndCF = CFrame.new(segmentEnd, segmentEnd + currentLookVector)
-            
-            -- Создаем твин для сегмента
-            local tweenInfo = TweenInfo.new(
-                segmentDuration,
-                Enum.EasingStyle.Linear,
-                Enum.EasingDirection.InOut,
-                0,
-                false,
-                0
-            )
-            
-            local tween = TweenService:Create(hrp, tweenInfo, {CFrame = segmentEndCF})
-            activeTween = tween
-            tween:Play()
-            tween.Completed:Wait()
-            
-            -- Случайная микропауза между сегментами (имитация человека)
-            if i < segments then
-                task.wait(math.random(5, 15) / 100) -- 0.05-0.15 сек пауза
-            end
-        end
-        
-        -- ИСПРАВЛЕНИЕ: Финальная точная установка позиции с сохранением ориентации
-        hrp.CFrame = CFrame.new(endCF.Position, endCF.Position + currentLookVector)
-        activeTween = nil
-        
-        return true
-    end
-
-    local function smoothTweenTeleport(startCF, endCF, duration, easingStyle)
-        local character = player.Character
-        if not character then return false end
-        
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        
-        -- Отменяем предыдущий твин если есть
-        if activeTween then
-            activeTween:Cancel()
-            activeTween = nil
-        end
-        
-        -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию персонажа (только Y поворот)
-        local currentLookVector = startCF.LookVector
-        local targetPosition = endCF.Position
-        -- Создаем новый CFrame с сохранением направления взгляда
-        local correctedEndCF = CFrame.new(targetPosition, targetPosition + currentLookVector)
-        
-        -- Создаем TweenInfo
-        local tweenInfo = TweenInfo.new(
-            duration,                    -- Длительность
-            Enum.EasingStyle.Linear,     -- Linear = постоянная скорость без разгона
-            Enum.EasingDirection.InOut,  -- Направление
-            0,                           -- Повторы (0 = без повторов)
-            false,                       -- Реверс
-            0                            -- Задержка
-        )
-        
-        -- Создаем твин для CFrame с сохраненной ориентацией
-        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = correctedEndCF})
-        activeTween = tween
-        
-        -- Запускаем анимацию
-        tween:Play()
-        
-        -- Ждем завершения
-        tween.Completed:Wait()
-        activeTween = nil
-        
-        return true
-    end
-
-    local function smoothTeleport(startPos, endPos, steps, delayBetweenSteps)
-        local character = player.Character
-        if not character then return false end
-        
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        
-        -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию
-        local currentLookVector = hrp.CFrame.LookVector
-        
-        -- Вычисляем расстояние и направление
-        local distance = (endPos - startPos).Magnitude
-        
-        -- Если расстояние маленькое, просто телепортируемся
-        if distance < 10 then
-            hrp.CFrame = CFrame.new(endPos, endPos + currentLookVector)
-            return true
-        end
-        
-        -- Плавное перемещение маленькими шагами
-        for i = 1, steps do
-            local alpha = i / steps
-            local nextPos = startPos:Lerp(endPos, alpha)
-            
-            -- Безопасная установка позиции с сохранением ориентации
-            pcall(function()
-                hrp.CFrame = CFrame.new(nextPos, nextPos + currentLookVector)
-            end)
-            
-            task.wait(delayBetweenSteps)
-        end
-        
-        -- Финальная установка точной позиции с сохранением ориентации
-        pcall(function()
-            hrp.CFrame = CFrame.new(endPos, endPos + currentLookVector)
-        end)
-        
-        return true
-    end
-
-    -- Телепорт к позиции (с ПРОДВИНУТЫМ обходом античита)
-    local function teleportTo(position)
-        local character = player.Character
-        if not character then return false end
-        
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        
-        local currentPos = hrp.Position
-        local currentCF = hrp.CFrame
-        local currentLookVector = currentCF.LookVector -- Сохраняем направление взгляда
-        local targetCF = CFrame.new(position, position + currentLookVector) -- Создаем целевой CFrame с сохранением ориентации
-        local distance = (position - currentPos).Magnitude
-        
-        print("📏 Расстояние до цели:", math.floor(distance), "стадов")
-        
-        -- Выбираем метод телепорта в зависимости от расстояния
-        if distance < 10 then
-            -- Очень близко - мгновенный телепорт с сохранением ориентации
-            print("🚶 Очень близко, мгновенный телепорт")
-            hrp.CFrame = targetCF
-            task.wait(0.3)
-        elseif distance < 30 then
-            -- Близко - быстрый но безопасный телепорт
-            print("🏃 Близко, быстрый телепорт (1с)")
-            local success = pcall(function()
-                smoothTweenTeleport(currentCF, targetCF, 1.0, Enum.EasingStyle.Linear)
-            end)
-            if not success then
-                hrp.CFrame = targetCF
-            end
-            task.wait(0.4)
-        else
-            -- ПРОДВИНУТЫЙ ОБХОД - используем новую функцию с имитацией человека
-            print("🛡️ ПРОДВИНУТЫЙ ОБХОД АНТИЧИТА")
-            local success = pcall(function()
-                advancedSafeTeleport(currentCF, targetCF, distance)
-            end)
-            if not success then
-                -- Если не сработало, пробуем обычный медленный телепорт
-                print("⚠️ Запасной вариант")
-                smoothTeleport(currentPos, position, 15, 0.12)
-            end
-            task.wait(0.5)
-        end
-        
-        return true
-    end
-        end
-        
-        return true
-    end
-
-    -- Взять предмет из слота (нажать E на манекене)
-    local function takeItem(slotId, slot)
-        print("📥 Беру предмет из слота, SlotId:", slotId)
-        
-        -- Ищем ProximityPrompt в слоте
-        local prompt = nil
-        for _, desc in pairs(slot:GetDescendants()) do
-            if desc:IsA("ProximityPrompt") and desc.Enabled then
-                prompt = desc
-                print("🔘 Найден ProximityPrompt:", desc.ObjectText or "нет текста")
-                break
-            end
-        end
-        
-        if not prompt then
-            print("⚠️ ProximityPrompt не найден в слоте!")
-            return false
-        end
-        
-        -- Активируем ProximityPrompt (симулируем МГНОВЕННОЕ нажатие E)
-        print("⚨️ Мгновенно нажимаю E на предмете...")
-        local success = pcall(function()
-            if fireproximityprompt then
-                fireproximityprompt(prompt, 0) -- 0 = мгновенно без задержки
-                print("✅ Нажал E мгновенно через fireproximityprompt")
-            else
-                -- Мгновенная активация без удержания
-                prompt:InputHoldBegin()
-                prompt:InputHoldEnd()
-                print("✅ Нажал E мгновенно")
-            end
-        end)
-        
-        if not success then
-            print("❌ Ошибка активации ProximityPrompt")
-            return false
-        end
-        
-        -- СИЛЬНО увеличенная задержка для корзины (чтобы вещь ТОЧНО попала)
-        task.wait(1.8)
-        print("✅ Предмет должен быть в корзине")
-        
-        return true
-    end
-
-    -- Открыть магазин NPC (нажать E на NPC)
-    local function openShopNPC(npc)
-        print("🛒 Открываю магазин NPC...")
-        
-        -- Ищем ProximityPrompt у NPC
-        local prompt = nil
-        for _, desc in pairs(npc.Parent:GetDescendants()) do
-            if desc:IsA("ProximityPrompt") and desc.Enabled then
-                prompt = desc
-                print("🔘 Найден ProximityPrompt у NPC:", desc.ObjectText or "нет текста")
-                break
-            end
-        end
-        
-        if not prompt then
-            print("⚠️ ProximityPrompt не найден у NPC!")
-            return false
-        end
-        
-        -- Активируем ProximityPrompt (симулируем МГНОВЕННОЕ нажатие E)
-        print("⚨️ Мгновенно нажимаю E на NPC...")
-        local success = pcall(function()
-            if fireproximityprompt then
-                fireproximityprompt(prompt, 0) -- 0 = мгновенно без задержки
-                print("✅ Нажал E мгновенно через fireproximityprompt")
-            else
-                prompt:InputHoldBegin()
-                prompt:InputHoldEnd()
-                print("✅ Нажал E мгновенно")
-            end
-        end)
-        
-        if not success then
-            print("❌ Ошибка активации ProximityPrompt у NPC")
-            return false
-        end
-        
-        -- СИЛЬНО увеличенная задержка для загрузки GUI магазина
-        task.wait(1.2)
-        print("✅ GUI магазина должен быть открыт")
-        
-        return true
-    end
-
-    -- Оплатить предмет (нажать PAY в GUI)
-    local function purchaseItem(slotId)
-        print("💳 Оплачиваю предмет, SlotId:", slotId)
-        
-        local playerGui = player:WaitForChild("PlayerGui")
-        
-        -- СИЛЬНО увеличенная задержка для загрузки GUI
-        task.wait(0.8)
-        
-        -- Ищем кнопку PAY
-        print("🔍 Ищу кнопку PAY в GUI...")
-        local payButtonFound = false
-        
-        for _, gui in pairs(playerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Enabled then
-                for _, button in pairs(gui:GetDescendants()) do
-                    if button:IsA("TextButton") and button.Visible then
-                        local text = button.Text:upper()
-                        local name = button.Name:upper()
-                        
-                        if text:find("PAY") or name:find("PAY") then
-                            print("💳 Найдена кнопка PAY:", button.Name, "Текст:", button.Text)
-                            payButtonFound = true
-                            
-                            -- Нажимаем кнопку через getconnections
-                            pcall(function()
-                                if getconnections then
-                                    for _, connection in pairs(getconnections(button.MouseButton1Click)) do
-                                        connection:Fire()
-                                        print("✅ Нажал PAY через getconnections")
-                                    end
-                                end
-                            end)
-                            
-                            -- Также пробуем обычный клик
-                            pcall(function()
-                                button.MouseButton1Click:Fire()
-                            end)
-                            
-                            task.wait(0.7) -- СИЛЬНО увеличенная задержка после нажатия PAY
-                            break
-                        end
-                    end
-                end
-                if payButtonFound then break end
-            end
-        end
-        
-        -- Отправляем RemoteFunction для покупки
-        task.wait(0.8) -- СИЛЬНО увеличенная задержка перед RemoteFunction
-        print("📡 Вызываю RemoteFunction ShopPurchase...")
-        local success, result = pcall(function()
-            local args = {"ShopPurchase", {slotId}}
-            return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-        end)
-        
-        if success then
-            print("✅ Покупка выполнена! Результат:", result)
-            return true
-        else
-            print("❌ Ошибка покупки:", result)
-            return false
-        end
-    end
-
-    -- Купить один предмет
-    local function buyItem(mannequinData)
-        if autoBuyRunning then
-            return false, "Автобай уже работает"
-        end
-        
-        autoBuyRunning = true
-        
-        local slot = mannequinData.slot
-        local mannequin = mannequinData.mannequin
-        local clothingData = mannequinData.clothingData
-        
-        -- ==========================================
-        -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОКУПКОЙ
-        -- ==========================================
-        
-        -- ПРОВЕРКА 1: Манекен все еще существует?
-        local mannequinExists = pcall(function()
-            return mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace)
-        end)
-        
-        if not mannequinExists or not mannequin or not mannequin.Parent then
-            autoBuyRunning = false
-            print("⚠️ Манекен уже не существует (вероятно уже куплен)")
-            forceRemoveESP(mannequin, "манекен исчез перед покупкой")
-            return false, "Манекен не существует"
-        end
-        
-        -- ПРОВЕРКА 2: Слот все еще существует?
-        local slotExists = pcall(function()
-            return slot and slot.Parent and slot:IsDescendantOf(workspace)
-        end)
-        
-        if not slotExists or not slot or not slot.Parent then
-            autoBuyRunning = false
-            print("⚠️ Слот не существует (вешалка пропала)")
-            forceRemoveESP(mannequin, "слот исчез перед покупкой")
-            return false, "Слот не существует"
-        end
-        
-        -- ПРОВЕРКА 3: Манекен все еще в слоте?
-        local mannequinInSlot = slot:FindFirstChild("Mannequin")
-        if not mannequinInSlot or mannequinInSlot ~= mannequin then
-            autoBuyRunning = false
-            print("⚠️ Манекен не в слоте (уже куплен другим игроком)")
-            forceRemoveESP(mannequin, "манекен не в слоте")
-            return false, "Манекен не в слоте"
-        end
-        
-        -- ПРОВЕРКА 4: Одежда все еще на манекене?
-        local hasTargetClothing = false
-        for _, child in pairs(mannequin:GetChildren()) do
-            if child:IsA("Shirt") then
-                local id = child.ShirtTemplate:match("%d+")
-                if id and ASSETS[id] then
-                    hasTargetClothing = true
-                    break
-                end
-            elseif child:IsA("Pants") then
-                local id = child.PantsTemplate:match("%d+")
-                if id and ASSETS[id] then
-                    hasTargetClothing = true
-                    break
-                end
-            end
-        end
-        
-        if not hasTargetClothing then
-            autoBuyRunning = false
-            print("⚠️ Одежда уже не на манекене (куплена)")
-            forceRemoveESP(mannequin, "одежда исчезла")
-            return false, "Одежда не найдена"
-        end
-        
-        -- ==========================================
-        -- ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ - НАЧИНАЕМ ПОКУПКУ
-        -- ==========================================
-        
-        -- Получаем имя вещи
-        local itemNames = {}
-        if clothingData.shirtId then
-            local item = ASSETS[clothingData.shirtId]
-            if item then table.insert(itemNames, item.name) end
-        end
-        if clothingData.pantsId then
-            local item = ASSETS[clothingData.pantsId]
-            if item then table.insert(itemNames, item.name) end
-        end
-        local itemName = table.concat(itemNames, " + ")
-        
-        -- Проверяем баланс и цену
-        local playerMoney = getPlayerMoney()
-        local itemPrice = getItemPrice(slot)
-        
-        print("")
-        print("═══════════════════════════════")
-        print("🛒 ПОКУПАЮ:", itemName)
-        print("💰 Баланс:", playerMoney, "$")
-        print("💵 Цена:", itemPrice, "$")
-        
-        -- Проверка хватает ли денег
-        if itemPrice > 0 and playerMoney < itemPrice then
-            autoBuyRunning = false
-            print("❌ НЕ ХВАТАЕТ ДЕНЕГ!")
-            print("   Нужно:", itemPrice, "$")
-            print("   Есть:", playerMoney, "$")
-            print("   Не хватает:", itemPrice - playerMoney, "$")
-            print("═══════════════════════════════")
-            return false, "Не хватает денег"
-        end
-        
-        if itemPrice > 0 then
-            print("✅ Денег хватает!")
-        else
-            print("⚠️ Цена не найдена, пробую купить")
-        end
-        print("═══════════════════════════════")
-        
-        -- Получаем SlotId
-        local slotId = getSlotId(slot)
-        if not slotId then
-            autoBuyRunning = false
-            print("❌ SlotId не найден")
-            return false, "SlotId не найден"
-        end
-        print("🆔 SlotId:", slotId)
-        
-        -- Получаем зону
-        local zoneName = slot.Parent.Parent.Name
-        print("📍 Зона:", zoneName)
-        
-        -- Шаг 1: Телепорт к предмету
-        print("")
-        print("🚀 ШАГ 1: Телепортируюсь к предмету...")
-        local mannequinPos = mannequin:FindFirstChild("HumanoidRootPart") or mannequin:FindFirstChild("Torso") or mannequin.PrimaryPart
-        if not mannequinPos then
-            autoBuyRunning = false
-            print("❌ Позиция манекена не найдена")
-            return false, "Позиция манекена не найдена"
-        end
-        
-        -- Телепортируемся прямо к манекену (еще ближе)
-        local targetPos = mannequinPos.Position + Vector3.new(0, 0, 1.5)
-        if not teleportTo(targetPos) then
-            autoBuyRunning = false
-            print("❌ Ошибка телепорта к предмету")
-            return false, "Ошибка телепорта к предмету"
-        end
-        print("✅ Телепортирован к предмету")
-        
-        task.wait(1.2) -- СИЛЬНО увеличенная задержка после телепорта к предмету
-        
-        -- Шаг 2: Взять предмет (нажать E)
-        print("")
-        print("👕 ШАГ 2: Нажимаю E на предмете...")
-        if not takeItem(slotId, slot) then
-            autoBuyRunning = false
-            print("❌ Не удалось взять предмет")
-            return false, "Не удалось взять предмет"
-        end
-        print("✅ Предмет взят и в корзине")
-        
-        task.wait(1.5) -- СИЛЬНО увеличенная задержка после взятия предмета
-        
-        -- Шаг 3: Найти NPC
-        print("")
-        print("🔍 ШАГ 3: Ищу NPC в зоне...")
-        local npc = findNPCInZone(zoneName)
-        if not npc then
-            autoBuyRunning = false
-            print("❌ NPC не найден в зоне")
-            return false, "NPC не найден в зоне"
-        end
-        print("✅ NPC найден")
-        
-        -- Шаг 4: Телепорт к NPC
-        print("")
-        print("🚀 ШАГ 4: Телепортируюсь к NPC...")
-        local npcTargetPos = npc.Position + Vector3.new(0, 0, 3)
-        if not teleportTo(npcTargetPos) then
-            autoBuyRunning = false
-            print("❌ Ошибка телепорта к NPC")
-            return false, "Ошибка телепорта к NPC"
-        end
-        print("✅ Телепортирован к NPC")
-        
-        task.wait(1.0) -- СИЛЬНО увеличенная задержка после телепорта к NPC
-        
-        -- Шаг 5: Открыть магазин (нажать E на NPC)
-        print("")
-        print("� ШАГ 5: Нажимаю E на NPC...")
-        if not openShopNPC(npc) then
-            autoBuyRunning = false
-            print("❌ Не удалось открыть магазин")
-            return false, "Не удалось открыть магазин"
-        end
-        print("✅ Магазин открыт")
-        
-        task.wait(1.2) -- СИЛЬНО увеличенная задержка после открытия магазина
-        
-        -- Шаг 6: Оплата (нажать PAY)
-        print("")
-        print("💳 ШАГ 6: Нажимаю PAY...")
-        if not purchaseItem(slotId) then
-            autoBuyRunning = false
-            print("❌ Ошибка при оплате")
-            return false, "Ошибка при оплате"
-        end
-        
-        task.wait(1.0) -- СИЛЬНО увеличенная задержка после оплаты
-        
-        -- ДОБАВЛЯЕМ СЛОТ В СПИСОК КУПЛЕННЫХ
-        purchasedSlots[slotId] = true
-        print("📋 Слот", slotId, "добавлен в список купленных")
-        
-        -- УДАЛЯЕМ ESP после успешной покупки
-        forceRemoveESP(mannequin, "успешно куплено")
-        
-        autoBuyRunning = false
-        print("")
-        print("═══════════════════════════════")
-        print("✅ УСПЕШНО КУПЛЕНО:", itemName)
-        print("═══════════════════════════════")
-        print("")
-        return true, "Успешно куплено"
-    end
-
-    -- Автобай всех найденных вещей
-    _G.startAutoBuy = function()
-        if not espEnabled then
-            return false, "Сначала включи ESP!"
-        end
-        
-        autoBuyEnabled = true
-        print("🤖 Автобай запущен!")
-        print("💰 Проверяю баланс...")
-        
-        local playerMoney = getPlayerMoney()
-        print("💵 Ваш баланс:", playerMoney, "$")
-        
-        task.spawn(function()
-            local mannequins = getAllMannequins()
-            local bought = 0
-            local errors = 0
-            local skippedNoMoney = 0
-            
-            -- Сортируем по цене (от дешевых к дорогим)
-            local sortedMannequins = {}
-            for _, data in pairs(mannequins) do
-                -- Проверяем что вещь в базе
-                if (data.clothingData.shirtId and ASSETS[data.clothingData.shirtId]) or
-                (data.clothingData.pantsId and ASSETS[data.clothingData.pantsId]) then
-                    
-                    local price = getItemPrice(data.slot)
-                    table.insert(sortedMannequins, {
-                        data = data,
-                        price = price
-                    })
-                end
-            end
-            
-            -- Сортируем по цене
-            table.sort(sortedMannequins, function(a, b)
-                return a.price < b.price
-            end)
-            
-            print("🔍 Найдено вещей для покупки:", #sortedMannequins)
-            print("")
-            
-            for _, item in pairs(sortedMannequins) do
-                if not autoBuyEnabled then
-                    print("⏸️ Автобай остановлен")
-                    break
-                end
-                
-                -- ============================================
-                -- ПРОВЕРКА: УЖЕ КУПИЛИ ЭТОТ СЛОТ?
-                -- ============================================
-                local slotId = getSlotId(item.data.slot)
-                if slotId and purchasedSlots[slotId] then
-                    -- Получаем имя вещи
-                    local itemNames = {}
-                    if item.data.clothingData.shirtId then
-                        local asset = ASSETS[item.data.clothingData.shirtId]
-                        if asset then table.insert(itemNames, asset.name) end
-                    end
-                    if item.data.clothingData.pantsId then
-                        local asset = ASSETS[item.data.clothingData.pantsId]
-                        if asset then table.insert(itemNames, asset.name) end
-                    end
-                    local itemName = table.concat(itemNames, " + ")
-                    
-                    print("⏭️ ПРОПУСК (уже куплено):", itemName)
-                    print("   SlotId:", slotId)
-                    forceRemoveESP(item.data.mannequin, "уже куплено ранее")
-                    task.wait(0.1)
-                    continue
-                end
-                
-                -- ============================================
-                -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОПЫТКОЙ КУПИТЬ
-                -- ============================================
-                local mannequin = item.data.mannequin
-                local slot = item.data.slot
-                
-                -- Проверяем что вещь все еще существует
-                local itemStillExists = false
-                pcall(function()
-                    if mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace) then
-                        if slot and slot.Parent and slot:IsDescendantOf(workspace) then
-                            local mannequinInSlot = slot:FindFirstChild("Mannequin")
-                            if mannequinInSlot == mannequin then
-                                -- Проверяем что одежда все еще на манекене
-                                for _, child in pairs(mannequin:GetChildren()) do
-                                    if child:IsA("Shirt") then
-                                        local id = child.ShirtTemplate:match("%d+")
-                                        if id and ASSETS[id] then
-                                            itemStillExists = true
-                                            break
-                                        end
-                                    elseif child:IsA("Pants") then
-                                        local id = child.PantsTemplate:match("%d+")
-                                        if id and ASSETS[id] then
-                                            itemStillExists = true
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                        end
+                -- Следим за изменением детей слота (манекен может быть заменен)
+                trackData.slot.ChildRemoved:Connect(function(child)
+                    if child == model or child.Name == "Mannequin" then
+                        task.wait(0.05)
+                        updateESP()
                     end
                 end)
-                
-                if not itemStillExists then
-                    -- Вещь уже куплена или пропала - пропускаем и удаляем ESP
-                    print("⏭️ ПРОПУСК (вещь уже куплена или пропала)")
-                    forceRemoveESP(mannequin, "вещь пропала в автобае")
-                    updateESP() -- Принудительное обновление
-                    task.wait(0.1)
-                    continue
+            end
+        end
+    end
+    
+    print("✅ ESP включен! Найдено:", found)
+end
+
+local function disableESP()
+    espEnabled = false
+    clearESP()
+    print("❌ ESP выключен")
+end
+
+-- ============================================
+-- АВТОБАЙ ФУНКЦИИ
+-- ============================================
+
+-- Получить баланс игрока
+local function getPlayerMoney()
+    -- Пробуем разные варианты получения денег
+    local money = 0
+    
+    -- Вариант 1: Leaderstats
+    pcall(function()
+        local leaderstats = player:FindFirstChild("leaderstats")
+        if leaderstats then
+            local cash = leaderstats:FindFirstChild("Cash") or leaderstats:FindFirstChild("Money") or leaderstats:FindFirstChild("Coins")
+            if cash and cash.Value then
+                money = cash.Value
+            end
+        end
+    end)
+    
+    -- Вариант 2: PlayerGui
+    if money == 0 then
+        pcall(function()
+            local playerGui = player:WaitForChild("PlayerGui", 1)
+            for _, gui in pairs(playerGui:GetDescendants()) do
+                if gui:IsA("TextLabel") and gui.Name:lower():find("cash") or gui.Name:lower():find("money") then
+                    local text = gui.Text
+                    local amount = text:match("%d+")
+                    if amount then
+                        money = tonumber(amount) or 0
+                    end
                 end
-                
-                -- ============================================
-                -- ПРОВЕРКА ДЕНЕГ
-                -- ============================================
-                
-                -- Обновляем баланс перед каждой покупкой
-                playerMoney = getPlayerMoney()
-                
-                -- Проверяем хватает ли денег
-                if item.price > 0 and playerMoney < item.price then
-                    skippedNoMoney = skippedNoMoney + 1
-                    
-                    -- Получаем имя вещи
-                    local itemNames = {}
-                    if item.data.clothingData.shirtId then
-                        local asset = ASSETS[item.data.clothingData.shirtId]
-                        if asset then table.insert(itemNames, asset.name) end
+            end
+        end)
+    end
+    
+    return money
+end
+
+-- Получить цену предмета из слота
+local function getItemPrice(slot)
+    -- Пробуем найти цену в слоте
+    local price = 0
+    
+    pcall(function()
+        -- Вариант 1: Атрибут Price
+        if slot:GetAttribute("Price") then
+            price = slot:GetAttribute("Price")
+        end
+        
+        -- Вариант 2: StringValue или NumberValue с именем Price
+        if price == 0 then
+            local priceValue = slot:FindFirstChild("Price") or slot:FindFirstChild("price")
+            if priceValue and (priceValue:IsA("NumberValue") or priceValue:IsA("IntValue")) then
+                price = priceValue.Value
+            elseif priceValue and priceValue:IsA("StringValue") then
+                local amount = priceValue.Value:match("%d+")
+                if amount then
+                    price = tonumber(amount)
+                end
+            end
+        end
+        
+        -- Вариант 3: Ищем в Configuration
+        if price == 0 then
+            for _, child in pairs(slot:GetDescendants()) do
+                if child.Name:lower():find("price") then
+                    if child:IsA("NumberValue") or child:IsA("IntValue") then
+                        price = child.Value
+                    elseif child:IsA("StringValue") then
+                        local amount = child.Value:match("%d+")
+                        if amount then
+                            price = tonumber(amount)
+                        end
                     end
-                    if item.data.clothingData.pantsId then
-                        local asset = ASSETS[item.data.clothingData.pantsId]
-                        if asset then table.insert(itemNames, asset.name) end
-                    end
-                    local itemName = table.concat(itemNames, " + ")
-                    
-                    print("💸 ПРОПУСК (не хватает денег):", itemName)
-                    print("   Цена:", item.price, "$ | Баланс:", playerMoney, "$")
-                    print("")
-                    
-                    -- Если больше не можем купить ничего, останавливаемся
-                    if item.price <= playerMoney then
-                        -- Есть деньги, продолжаем
+                end
+            end
+        end
+        
+        -- Вариант 4: Ищем TextLabel с ценой рядом
+        if price == 0 then
+            for _, desc in pairs(slot:GetDescendants()) do
+                if desc:IsA("TextLabel") or desc:IsA("BillboardGui") then
+                    local text = ""
+                    if desc:IsA("TextLabel") then
+                        text = desc.Text
                     else
-                        -- Если отсортировано правильно, все следующие будут еще дороже
-                        print("⚠️ На остальные вещи тоже не хватит денег")
-                        break
-                    end
-                else
-                    local success, message = buyItem(item.data)
-                    if success then
-                        bought = bought + 1
-                        updateESP() -- Обновляем ESP после покупки
-                    else
-                        if message == "Манекен не существует" or message == "Слот не существует" or 
-                        message == "Манекен не в слоте" or message == "Одежда не найдена" then
-                            -- Вещь уже куплена, не считаем ошибкой
-                            print("⏭️ Вещь уже куплена")
-                        elseif message ~= "Не хватает денег" then
-                            errors = errors + 1
-                            warn("❌", message)
+                        local label = desc:FindFirstChildOfClass("TextLabel")
+                        if label then
+                            text = label.Text
                         end
                     end
                     
-                    task.wait(1.2) -- СИЛЬНО увеличенная задержка между покупками для безопасности
+                    -- Ищем паттерн цены: $123, 123$, Cash: 123, и т.д.
+                    local amount = text:match("%$%s*(%d+)") or text:match("(%d+)%s*%$") or text:match("Cash:%s*(%d+)")
+                    if amount then
+                        price = tonumber(amount)
+                        break
+                    end
                 end
             end
-            
-            autoBuyEnabled = false
-            print("")
-            print("🏁 Автобай завершен!")
-            print("✅ Куплено:", bought)
-            print("💸 Пропущено (нет денег):", skippedNoMoney)
-            print("❌ Ошибок:", errors)
-            print("💰 Остаток:", getPlayerMoney(), "$")
+        end
+    end)
+    
+    return price
+end
+
+-- Найти NPC в зоне
+local function findNPCInZone(zoneName)
+    local zone = workspace:FindFirstChild(zoneName)
+    if not zone then return nil end
+    
+    for _, child in pairs(zone:GetDescendants()) do
+        if child:IsA("Model") and child.Name:lower():find("npc") then
+            local humanoidRootPart = child:FindFirstChild("HumanoidRootPart")
+            if humanoidRootPart then
+                return humanoidRootPart
+            end
+        end
+    end
+    return nil
+end
+
+-- Получить SlotId из Slot
+local function getSlotId(slot)
+    -- Слот может иметь разные структуры, пробуем все варианты
+    
+    -- Вариант 1: SlotId хранится в атрибуте
+    if slot:GetAttribute("SlotId") then
+        return slot:GetAttribute("SlotId")
+    end
+    
+    -- Вариант 2: SlotId в StringValue или подобном
+    local slotIdValue = slot:FindFirstChild("SlotId") or slot:FindFirstChild("slotId") or slot:FindFirstChild("ID")
+    if slotIdValue and slotIdValue:IsA("StringValue") then
+        return slotIdValue.Value
+    end
+    
+    -- Вариант 3: Имя слота содержит полный SlotId (например "Slot_5587_114582")
+    if slot.Name:match("Slot_%d+_%d+") then
+        return slot.Name
+    end
+    
+    -- Вариант 4: Имя слота это только "Slot_X", ищем Configuration или другие данные
+    for _, child in pairs(slot:GetChildren()) do
+        if child:IsA("Configuration") or child.Name == "Data" or child.Name == "Info" then
+            for _, subChild in pairs(child:GetChildren()) do
+                if subChild.Name:lower():find("slot") and subChild:IsA("StringValue") then
+                    return subChild.Value
+                end
+            end
+        end
+    end
+    
+    -- Вариант 5: Проверяем все StringValue в слоте
+    for _, child in pairs(slot:GetDescendants()) do
+        if child:IsA("StringValue") and child.Value:match("SLOT_%d+_%d+") then
+            return child.Value
+        end
+    end
+    
+    -- Если ничего не нашли, выводим структуру слота для отладки
+    print("⚠️ Не удалось найти SlotId. Структура слота:")
+    print("  Имя:", slot.Name)
+    print("  Дети:")
+    for _, child in pairs(slot:GetChildren()) do
+        print("    -", child.Name, child.ClassName)
+        if child:IsA("StringValue") or child:IsA("IntValue") or child:IsA("NumberValue") then
+            print("      Значение:", child.Value)
+        end
+    end
+    print("  Атрибуты:")
+    for attr, value in pairs(slot:GetAttributes()) do
+        print("    -", attr, "=", value)
+    end
+    
+    -- В крайнем случае возвращаем имя слота
+    return slot.Name
+end
+
+-- ============================================
+-- БЕЗОПАСНЫЙ ТЕЛЕПОРТ С ОБХОДОМ АНТИЧИТА
+-- ============================================
+-- Используем TweenService для МАКСИМАЛЬНО плавного перемещения
+-- Античит видит это как обычное движение персонажа
+
+local activeTween = nil -- Храним активный твин для отмены
+
+-- УЛУЧШЕННЫЙ ОБХОД: Телепорт с имитацией человеческого движения
+local function advancedSafeTeleport(startCF, endCF, distance)
+    local character = player.Character
+    if not character then return false end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    -- Отменяем предыдущий твин если есть
+    if activeTween then
+        activeTween:Cancel()
+        activeTween = nil
+    end
+    
+    -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию персонажа
+    local currentLookVector = startCF.LookVector
+    
+    -- Вычисляем безопасную скорость (оптимизированная)
+    local maxSpeed = 25 -- Скорость для обхода детекта (чуть быстрее)
+    local calculatedDuration = distance / maxSpeed
+    
+    -- Минимум для небольших расстояний
+    local safeDuration = math.max(calculatedDuration, 1.0)
+    
+    -- Для очень больших расстояний добавляем немного времени
+    if distance > 120 then
+        safeDuration = math.max(safeDuration, 2.0)
+    end
+    
+    print("🛡️ Безопасный телепорт:", math.floor(distance), "стадов за", string.format("%.1f", safeDuration), "сек")
+    print("⚡ Скорость:", string.format("%.1f", distance/safeDuration), "стадов/сек")
+    
+    -- Разбиваем на несколько сегментов для имитации человеческого движения
+    local segments = math.max(2, math.floor(distance / 30)) -- Каждые 30 стадов = новый сегмент
+    local segmentDuration = safeDuration / segments
+    
+    for i = 1, segments do
+        local startProgress = (i - 1) / segments
+        local endProgress = i / segments
+        
+        -- Добавляем небольшое случайное отклонение для имитации человека
+        local randomOffset = Vector3.new(
+            math.random(-100, 100) / 100, -- ±1 стад по X
+            0,
+            math.random(-100, 100) / 100  -- ±1 стад по Z
+        )
+        
+        local segmentStart = startCF.Position:Lerp(endCF.Position, startProgress)
+        local segmentEnd = startCF.Position:Lerp(endCF.Position, endProgress)
+        
+        -- Только последний сегмент идет точно в цель, остальные с отклонением
+        if i < segments then
+            segmentEnd = segmentEnd + randomOffset
+        end
+        
+        -- ИСПРАВЛЕНИЕ: Создаем CFrame с сохранением направления взгляда
+        local segmentStartCF = CFrame.new(segmentStart, segmentStart + currentLookVector)
+        local segmentEndCF = CFrame.new(segmentEnd, segmentEnd + currentLookVector)
+        
+        -- Создаем твин для сегмента
+        local tweenInfo = TweenInfo.new(
+            segmentDuration,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.InOut,
+            0,
+            false,
+            0
+        )
+        
+        local tween = TweenService:Create(hrp, tweenInfo, {CFrame = segmentEndCF})
+        activeTween = tween
+        tween:Play()
+        tween.Completed:Wait()
+        
+        -- Случайная микропауза между сегментами (имитация человека)
+        if i < segments then
+            task.wait(math.random(5, 15) / 100) -- 0.05-0.15 сек пауза
+        end
+    end
+    
+    -- ИСПРАВЛЕНИЕ: Финальная точная установка позиции с сохранением ориентации
+    hrp.CFrame = CFrame.new(endCF.Position, endCF.Position + currentLookVector)
+    activeTween = nil
+    
+    return true
+end
+
+local function smoothTweenTeleport(startCF, endCF, duration, easingStyle)
+    local character = player.Character
+    if not character then return false end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    -- Отменяем предыдущий твин если есть
+    if activeTween then
+        activeTween:Cancel()
+        activeTween = nil
+    end
+    
+    -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию персонажа (только Y поворот)
+    local currentLookVector = startCF.LookVector
+    local targetPosition = endCF.Position
+    -- Создаем новый CFrame с сохранением направления взгляда
+    local correctedEndCF = CFrame.new(targetPosition, targetPosition + currentLookVector)
+    
+    -- Создаем TweenInfo
+    local tweenInfo = TweenInfo.new(
+        duration,                    -- Длительность
+        Enum.EasingStyle.Linear,     -- Linear = постоянная скорость без разгона
+        Enum.EasingDirection.InOut,  -- Направление
+        0,                           -- Повторы (0 = без повторов)
+        false,                       -- Реверс
+        0                            -- Задержка
+    )
+    
+    -- Создаем твин для CFrame с сохраненной ориентацией
+    local tween = TweenService:Create(hrp, tweenInfo, {CFrame = correctedEndCF})
+    activeTween = tween
+    
+    -- Запускаем анимацию
+    tween:Play()
+    
+    -- Ждем завершения
+    tween.Completed:Wait()
+    activeTween = nil
+    
+    return true
+end
+
+local function smoothTeleport(startPos, endPos, steps, delayBetweenSteps)
+    local character = player.Character
+    if not character then return false end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    -- ИСПРАВЛЕНИЕ: Сохраняем текущую ориентацию
+    local currentLookVector = hrp.CFrame.LookVector
+    
+    -- Вычисляем расстояние и направление
+    local distance = (endPos - startPos).Magnitude
+    
+    -- Если расстояние маленькое, просто телепортируемся
+    if distance < 10 then
+        hrp.CFrame = CFrame.new(endPos, endPos + currentLookVector)
+        return true
+    end
+    
+    -- Плавное перемещение маленькими шагами
+    for i = 1, steps do
+        local alpha = i / steps
+        local nextPos = startPos:Lerp(endPos, alpha)
+        
+        -- Безопасная установка позиции с сохранением ориентации
+        pcall(function()
+            hrp.CFrame = CFrame.new(nextPos, nextPos + currentLookVector)
         end)
         
-        return true, "Автобай запущен"
+        task.wait(delayBetweenSteps)
     end
+    
+    -- Финальная установка точной позиции с сохранением ориентации
+    pcall(function()
+        hrp.CFrame = CFrame.new(endPos, endPos + currentLookVector)
+    end)
+    
+    return true
+end
 
-    _G.stopAutoBuy = function()
-        autoBuyEnabled = false
-        print("⏹️ Автобай остановлен")
-    end
-
-    -- Очистить список купленных предметов
-    _G.clearPurchasedList = function()
-        local count = 0
-        for _ in pairs(purchasedSlots) do
-            count = count + 1
+-- Телепорт к позиции (с ПРОДВИНУТЫМ обходом античита)
+local function teleportTo(position)
+    local character = player.Character
+    if not character then return false end
+    
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    local currentPos = hrp.Position
+    local currentCF = hrp.CFrame
+    local currentLookVector = currentCF.LookVector -- Сохраняем направление взгляда
+    local targetCF = CFrame.new(position, position + currentLookVector) -- Создаем целевой CFrame с сохранением ориентации
+    local distance = (position - currentPos).Magnitude
+    
+    print("📏 Расстояние до цели:", math.floor(distance), "стадов")
+    
+    -- Выбираем метод телепорта в зависимости от расстояния
+    if distance < 10 then
+        -- Очень близко - мгновенный телепорт с сохранением ориентации
+        print("🚶 Очень близко, мгновенный телепорт")
+        hrp.CFrame = targetCF
+        task.wait(0.3)
+    elseif distance < 30 then
+        -- Близко - быстрый но безопасный телепорт
+        print("🏃 Близко, быстрый телепорт (1с)")
+        local success = pcall(function()
+            smoothTweenTeleport(currentCF, targetCF, 1.0, Enum.EasingStyle.Linear)
+        end)
+        if not success then
+            hrp.CFrame = targetCF
         end
-        purchasedSlots = {}
-        print("🗑️ Список купленных очищен! Было:", count)
-        return count
+        task.wait(0.4)
+    else
+        -- ПРОДВИНУТЫЙ ОБХОД - используем новую функцию с имитацией человека
+        print("🛡️ ПРОДВИНУТЫЙ ОБХОД АНТИЧИТА")
+        local success = pcall(function()
+            advancedSafeTeleport(currentCF, targetCF, distance)
+        end)
+        if not success then
+            -- Если не сработало, пробуем обычный медленный телепорт
+            print("⚠️ Запасной вариант")
+            smoothTeleport(currentPos, position, 15, 0.12)
+        end
+        task.wait(0.5)
     end
+    
+    return true
+end
+    end
+    
+    return true
+end
+
+-- Взять предмет из слота (нажать E на манекене)
+local function takeItem(slotId, slot)
+    print("📥 Беру предмет из слота, SlotId:", slotId)
+    
+    -- Ищем ProximityPrompt в слоте
+    local prompt = nil
+    for _, desc in pairs(slot:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") and desc.Enabled then
+            prompt = desc
+            print("🔘 Найден ProximityPrompt:", desc.ObjectText or "нет текста")
+            break
+        end
+    end
+    
+    if not prompt then
+        print("⚠️ ProximityPrompt не найден в слоте!")
+        return false
+    end
+    
+    -- Активируем ProximityPrompt (симулируем МГНОВЕННОЕ нажатие E)
+    print("⚨️ Мгновенно нажимаю E на предмете...")
+    local success = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0) -- 0 = мгновенно без задержки
+            print("✅ Нажал E мгновенно через fireproximityprompt")
+        else
+            -- Мгновенная активация без удержания
+            prompt:InputHoldBegin()
+            prompt:InputHoldEnd()
+            print("✅ Нажал E мгновенно")
+        end
+    end)
+    
+    if not success then
+        print("❌ Ошибка активации ProximityPrompt")
+        return false
+    end
+    
+    -- СИЛЬНО увеличенная задержка для корзины (чтобы вещь ТОЧНО попала)
+    task.wait(1.8)
+    print("✅ Предмет должен быть в корзине")
+    
+    return true
+end
+
+-- Открыть магазин NPC (нажать E на NPC)
+local function openShopNPC(npc)
+    print("🛒 Открываю магазин NPC...")
+    
+    -- Ищем ProximityPrompt у NPC
+    local prompt = nil
+    for _, desc in pairs(npc.Parent:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") and desc.Enabled then
+            prompt = desc
+            print("🔘 Найден ProximityPrompt у NPC:", desc.ObjectText or "нет текста")
+            break
+        end
+    end
+    
+    if not prompt then
+        print("⚠️ ProximityPrompt не найден у NPC!")
+        return false
+    end
+    
+    -- Активируем ProximityPrompt (симулируем МГНОВЕННОЕ нажатие E)
+    print("⚨️ Мгновенно нажимаю E на NPC...")
+    local success = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0) -- 0 = мгновенно без задержки
+            print("✅ Нажал E мгновенно через fireproximityprompt")
+        else
+            prompt:InputHoldBegin()
+            prompt:InputHoldEnd()
+            print("✅ Нажал E мгновенно")
+        end
+    end)
+    
+    if not success then
+        print("❌ Ошибка активации ProximityPrompt у NPC")
+        return false
+    end
+    
+    -- СИЛЬНО увеличенная задержка для загрузки GUI магазина
+    task.wait(1.2)
+    print("✅ GUI магазина должен быть открыт")
+    
+    return true
+end
+
+-- Оплатить предмет (нажать PAY в GUI)
+local function purchaseItem(slotId)
+    print("💳 Оплачиваю предмет, SlotId:", slotId)
+    
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- СИЛЬНО увеличенная задержка для загрузки GUI
+    task.wait(0.8)
+    
+    -- Ищем кнопку PAY
+    print("🔍 Ищу кнопку PAY в GUI...")
+    local payButtonFound = false
+    
+    for _, gui in pairs(playerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Enabled then
+            for _, button in pairs(gui:GetDescendants()) do
+                if button:IsA("TextButton") and button.Visible then
+                    local text = button.Text:upper()
+                    local name = button.Name:upper()
+                    
+                    if text:find("PAY") or name:find("PAY") then
+                        print("💳 Найдена кнопка PAY:", button.Name, "Текст:", button.Text)
+                        payButtonFound = true
+                        
+                        -- Нажимаем кнопку через getconnections
+                        pcall(function()
+                            if getconnections then
+                                for _, connection in pairs(getconnections(button.MouseButton1Click)) do
+                                    connection:Fire()
+                                    print("✅ Нажал PAY через getconnections")
+                                end
+                            end
+                        end)
+                        
+                        -- Также пробуем обычный клик
+                        pcall(function()
+                            button.MouseButton1Click:Fire()
+                        end)
+                        
+                        task.wait(0.7) -- СИЛЬНО увеличенная задержка после нажатия PAY
+                        break
+                    end
+                end
+            end
+            if payButtonFound then break end
+        end
+    end
+    
+    -- Отправляем RemoteFunction для покупки
+    task.wait(0.8) -- СИЛЬНО увеличенная задержка перед RemoteFunction
+    print("📡 Вызываю RemoteFunction ShopPurchase...")
+    local success, result = pcall(function()
+        local args = {"ShopPurchase", {slotId}}
+        return game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+    end)
+    
+    if success then
+        print("✅ Покупка выполнена! Результат:", result)
+        return true
+    else
+        print("❌ Ошибка покупки:", result)
+        return false
+    end
+end
+
+-- Купить один предмет
+local function buyItem(mannequinData)
+    if autoBuyRunning then
+        return false, "Автобай уже работает"
+    end
+    
+    autoBuyRunning = true
+    
+    local slot = mannequinData.slot
+    local mannequin = mannequinData.mannequin
+    local clothingData = mannequinData.clothingData
+    
+    -- ==========================================
+    -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОКУПКОЙ
+    -- ==========================================
+    
+    -- ПРОВЕРКА 1: Манекен все еще существует?
+    local mannequinExists = pcall(function()
+        return mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace)
+    end)
+    
+    if not mannequinExists or not mannequin or not mannequin.Parent then
+        autoBuyRunning = false
+        print("⚠️ Манекен уже не существует (вероятно уже куплен)")
+        forceRemoveESP(mannequin, "манекен исчез перед покупкой")
+        return false, "Манекен не существует"
+    end
+    
+    -- ПРОВЕРКА 2: Слот все еще существует?
+    local slotExists = pcall(function()
+        return slot and slot.Parent and slot:IsDescendantOf(workspace)
+    end)
+    
+    if not slotExists or not slot or not slot.Parent then
+        autoBuyRunning = false
+        print("⚠️ Слот не существует (вешалка пропала)")
+        forceRemoveESP(mannequin, "слот исчез перед покупкой")
+        return false, "Слот не существует"
+    end
+    
+    -- ПРОВЕРКА 3: Манекен все еще в слоте?
+    local mannequinInSlot = slot:FindFirstChild("Mannequin")
+    if not mannequinInSlot or mannequinInSlot ~= mannequin then
+        autoBuyRunning = false
+        print("⚠️ Манекен не в слоте (уже куплен другим игроком)")
+        forceRemoveESP(mannequin, "манекен не в слоте")
+        return false, "Манекен не в слоте"
+    end
+    
+    -- ПРОВЕРКА 4: Одежда все еще на манекене?
+    local hasTargetClothing = false
+    for _, child in pairs(mannequin:GetChildren()) do
+        if child:IsA("Shirt") then
+            local id = child.ShirtTemplate:match("%d+")
+            if id and ASSETS[id] then
+                hasTargetClothing = true
+                break
+            end
+        elseif child:IsA("Pants") then
+            local id = child.PantsTemplate:match("%d+")
+            if id and ASSETS[id] then
+                hasTargetClothing = true
+                break
+            end
+        end
+    end
+    
+    if not hasTargetClothing then
+        autoBuyRunning = false
+        print("⚠️ Одежда уже не на манекене (куплена)")
+        forceRemoveESP(mannequin, "одежда исчезла")
+        return false, "Одежда не найдена"
+    end
+    
+    -- ==========================================
+    -- ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ - НАЧИНАЕМ ПОКУПКУ
+    -- ==========================================
+    
+    -- Получаем имя вещи
+    local itemNames = {}
+    if clothingData.shirtId then
+        local item = ASSETS[clothingData.shirtId]
+        if item then table.insert(itemNames, item.name) end
+    end
+    if clothingData.pantsId then
+        local item = ASSETS[clothingData.pantsId]
+        if item then table.insert(itemNames, item.name) end
+    end
+    local itemName = table.concat(itemNames, " + ")
+    
+    -- Проверяем баланс и цену
+    local playerMoney = getPlayerMoney()
+    local itemPrice = getItemPrice(slot)
+    
+    print("")
+    print("═══════════════════════════════")
+    print("🛒 ПОКУПАЮ:", itemName)
+    print("💰 Баланс:", playerMoney, "$")
+    print("💵 Цена:", itemPrice, "$")
+    
+    -- Проверка хватает ли денег
+    if itemPrice > 0 and playerMoney < itemPrice then
+        autoBuyRunning = false
+        print("❌ НЕ ХВАТАЕТ ДЕНЕГ!")
+        print("   Нужно:", itemPrice, "$")
+        print("   Есть:", playerMoney, "$")
+        print("   Не хватает:", itemPrice - playerMoney, "$")
+        print("═══════════════════════════════")
+        return false, "Не хватает денег"
+    end
+    
+    if itemPrice > 0 then
+        print("✅ Денег хватает!")
+    else
+        print("⚠️ Цена не найдена, пробую купить")
+    end
+    print("═══════════════════════════════")
+    
+    -- Получаем SlotId
+    local slotId = getSlotId(slot)
+    if not slotId then
+        autoBuyRunning = false
+        print("❌ SlotId не найден")
+        return false, "SlotId не найден"
+    end
+    print("🆔 SlotId:", slotId)
+    
+    -- Получаем зону
+    local zoneName = slot.Parent.Parent.Name
+    print("📍 Зона:", zoneName)
+    
+    -- Шаг 1: Телепорт к предмету
+    print("")
+    print("🚀 ШАГ 1: Телепортируюсь к предмету...")
+    local mannequinPos = mannequin:FindFirstChild("HumanoidRootPart") or mannequin:FindFirstChild("Torso") or mannequin.PrimaryPart
+    if not mannequinPos then
+        autoBuyRunning = false
+        print("❌ Позиция манекена не найдена")
+        return false, "Позиция манекена не найдена"
+    end
+    
+    -- Телепортируемся прямо к манекену (еще ближе)
+    local targetPos = mannequinPos.Position + Vector3.new(0, 0, 1.5)
+    if not teleportTo(targetPos) then
+        autoBuyRunning = false
+        print("❌ Ошибка телепорта к предмету")
+        return false, "Ошибка телепорта к предмету"
+    end
+    print("✅ Телепортирован к предмету")
+    
+    task.wait(1.2) -- СИЛЬНО увеличенная задержка после телепорта к предмету
+    
+    -- Шаг 2: Взять предмет (нажать E)
+    print("")
+    print("👕 ШАГ 2: Нажимаю E на предмете...")
+    if not takeItem(slotId, slot) then
+        autoBuyRunning = false
+        print("❌ Не удалось взять предмет")
+        return false, "Не удалось взять предмет"
+    end
+    print("✅ Предмет взят и в корзине")
+    
+    task.wait(1.5) -- СИЛЬНО увеличенная задержка после взятия предмета
+    
+    -- Шаг 3: Найти NPC
+    print("")
+    print("🔍 ШАГ 3: Ищу NPC в зоне...")
+    local npc = findNPCInZone(zoneName)
+    if not npc then
+        autoBuyRunning = false
+        print("❌ NPC не найден в зоне")
+        return false, "NPC не найден в зоне"
+    end
+    print("✅ NPC найден")
+    
+    -- Шаг 4: Телепорт к NPC
+    print("")
+    print("🚀 ШАГ 4: Телепортируюсь к NPC...")
+    local npcTargetPos = npc.Position + Vector3.new(0, 0, 3)
+    if not teleportTo(npcTargetPos) then
+        autoBuyRunning = false
+        print("❌ Ошибка телепорта к NPC")
+        return false, "Ошибка телепорта к NPC"
+    end
+    print("✅ Телепортирован к NPC")
+    
+    task.wait(1.0) -- СИЛЬНО увеличенная задержка после телепорта к NPC
+    
+    -- Шаг 5: Открыть магазин (нажать E на NPC)
+    print("")
+    print("� ШАГ 5: Нажимаю E на NPC...")
+    if not openShopNPC(npc) then
+        autoBuyRunning = false
+        print("❌ Не удалось открыть магазин")
+        return false, "Не удалось открыть магазин"
+    end
+    print("✅ Магазин открыт")
+    
+    task.wait(1.2) -- СИЛЬНО увеличенная задержка после открытия магазина
+    
+    -- Шаг 6: Оплата (нажать PAY)
+    print("")
+    print("💳 ШАГ 6: Нажимаю PAY...")
+    if not purchaseItem(slotId) then
+        autoBuyRunning = false
+        print("❌ Ошибка при оплате")
+        return false, "Ошибка при оплате"
+    end
+    
+    task.wait(1.0) -- СИЛЬНО увеличенная задержка после оплаты
+    
+    -- ДОБАВЛЯЕМ СЛОТ В СПИСОК КУПЛЕННЫХ
+    purchasedSlots[slotId] = true
+    print("📋 Слот", slotId, "добавлен в список купленных")
+    
+    -- УДАЛЯЕМ ESP после успешной покупки
+    forceRemoveESP(mannequin, "успешно куплено")
+    
+    autoBuyRunning = false
+    print("")
+    print("═══════════════════════════════")
+    print("✅ УСПЕШНО КУПЛЕНО:", itemName)
+    print("═══════════════════════════════")
+    print("")
+    return true, "Успешно куплено"
+end
+
+-- Автобай всех найденных вещей
+local function startAutoBuy()
+    if not espEnabled then
+        return false, "Сначала включи ESP!"
+    end
+    
+    autoBuyEnabled = true
+    print("🤖 Автобай запущен!")
+    print("💰 Проверяю баланс...")
+    
+    local playerMoney = getPlayerMoney()
+    print("💵 Ваш баланс:", playerMoney, "$")
+    
+    task.spawn(function()
+        local mannequins = getAllMannequins()
+        local bought = 0
+        local errors = 0
+        local skippedNoMoney = 0
+        
+        -- Сортируем по цене (от дешевых к дорогим)
+        local sortedMannequins = {}
+        for _, data in pairs(mannequins) do
+            -- Проверяем что вещь в базе
+            if (data.clothingData.shirtId and ASSETS[data.clothingData.shirtId]) or
+               (data.clothingData.pantsId and ASSETS[data.clothingData.pantsId]) then
+                
+                local price = getItemPrice(data.slot)
+                table.insert(sortedMannequins, {
+                    data = data,
+                    price = price
+                })
+            end
+        end
+        
+        -- Сортируем по цене
+        table.sort(sortedMannequins, function(a, b)
+            return a.price < b.price
+        end)
+        
+        print("🔍 Найдено вещей для покупки:", #sortedMannequins)
+        print("")
+        
+        for _, item in pairs(sortedMannequins) do
+            if not autoBuyEnabled then
+                print("⏸️ Автобай остановлен")
+                break
+            end
+            
+            -- ============================================
+            -- ПРОВЕРКА: УЖЕ КУПИЛИ ЭТОТ СЛОТ?
+            -- ============================================
+            local slotId = getSlotId(item.data.slot)
+            if slotId and purchasedSlots[slotId] then
+                -- Получаем имя вещи
+                local itemNames = {}
+                if item.data.clothingData.shirtId then
+                    local asset = ASSETS[item.data.clothingData.shirtId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                if item.data.clothingData.pantsId then
+                    local asset = ASSETS[item.data.clothingData.pantsId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                local itemName = table.concat(itemNames, " + ")
+                
+                print("⏭️ ПРОПУСК (уже куплено):", itemName)
+                print("   SlotId:", slotId)
+                forceRemoveESP(item.data.mannequin, "уже куплено ранее")
+                task.wait(0.1)
+                continue
+            end
+            
+            -- ============================================
+            -- ПРОВЕРКА СУЩЕСТВОВАНИЯ ПЕРЕД ПОПЫТКОЙ КУПИТЬ
+            -- ============================================
+            local mannequin = item.data.mannequin
+            local slot = item.data.slot
+            
+            -- Проверяем что вещь все еще существует
+            local itemStillExists = false
+            pcall(function()
+                if mannequin and mannequin.Parent and mannequin:IsDescendantOf(workspace) then
+                    if slot and slot.Parent and slot:IsDescendantOf(workspace) then
+                        local mannequinInSlot = slot:FindFirstChild("Mannequin")
+                        if mannequinInSlot == mannequin then
+                            -- Проверяем что одежда все еще на манекене
+                            for _, child in pairs(mannequin:GetChildren()) do
+                                if child:IsA("Shirt") then
+                                    local id = child.ShirtTemplate:match("%d+")
+                                    if id and ASSETS[id] then
+                                        itemStillExists = true
+                                        break
+                                    end
+                                elseif child:IsA("Pants") then
+                                    local id = child.PantsTemplate:match("%d+")
+                                    if id and ASSETS[id] then
+                                        itemStillExists = true
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+            
+            if not itemStillExists then
+                -- Вещь уже куплена или пропала - пропускаем и удаляем ESP
+                print("⏭️ ПРОПУСК (вещь уже куплена или пропала)")
+                forceRemoveESP(mannequin, "вещь пропала в автобае")
+                updateESP() -- Принудительное обновление
+                task.wait(0.1)
+                continue
+            end
+            
+            -- ============================================
+            -- ПРОВЕРКА ДЕНЕГ
+            -- ============================================
+            
+            -- Обновляем баланс перед каждой покупкой
+            playerMoney = getPlayerMoney()
+            
+            -- Проверяем хватает ли денег
+            if item.price > 0 and playerMoney < item.price then
+                skippedNoMoney = skippedNoMoney + 1
+                
+                -- Получаем имя вещи
+                local itemNames = {}
+                if item.data.clothingData.shirtId then
+                    local asset = ASSETS[item.data.clothingData.shirtId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                if item.data.clothingData.pantsId then
+                    local asset = ASSETS[item.data.clothingData.pantsId]
+                    if asset then table.insert(itemNames, asset.name) end
+                end
+                local itemName = table.concat(itemNames, " + ")
+                
+                print("💸 ПРОПУСК (не хватает денег):", itemName)
+                print("   Цена:", item.price, "$ | Баланс:", playerMoney, "$")
+                print("")
+                
+                -- Если больше не можем купить ничего, останавливаемся
+                if item.price <= playerMoney then
+                    -- Есть деньги, продолжаем
+                else
+                    -- Если отсортировано правильно, все следующие будут еще дороже
+                    print("⚠️ На остальные вещи тоже не хватит денег")
+                    break
+                end
+            else
+                local success, message = buyItem(item.data)
+                if success then
+                    bought = bought + 1
+                    updateESP() -- Обновляем ESP после покупки
+                else
+                    if message == "Манекен не существует" or message == "Слот не существует" or 
+                       message == "Манекен не в слоте" or message == "Одежда не найдена" then
+                        -- Вещь уже куплена, не считаем ошибкой
+                        print("⏭️ Вещь уже куплена")
+                    elseif message ~= "Не хватает денег" then
+                        errors = errors + 1
+                        warn("❌", message)
+                    end
+                end
+                
+                task.wait(1.2) -- СИЛЬНО увеличенная задержка между покупками для безопасности
+            end
+        end
+        
+        autoBuyEnabled = false
+        print("")
+        print("🏁 Автобай завершен!")
+        print("✅ Куплено:", bought)
+        print("💸 Пропущено (нет денег):", skippedNoMoney)
+        print("❌ Ошибок:", errors)
+        print("💰 Остаток:", getPlayerMoney(), "$")
+    end)
+    
+    return true, "Автобай запущен"
+end
+
+local function stopAutoBuy()
+    autoBuyEnabled = false
+    print("⏹️ Автобай остановлен")
+end
+
+-- Очистить список купленных предметов
+local function clearPurchasedList()
+    local count = 0
+    for _ in pairs(purchasedSlots) do
+        count = count + 1
+    end
+    purchasedSlots = {}
+    print("🗑️ Список купленных очищен! Было:", count)
+    return count
+end
 
 -- ============================================
 -- ПРОСТОЕ GUI (без Rayfield)
 -- ============================================
 print("🎨 Создаю GUI...")
 
-task.wait(2)
-
-local playerGui = player:WaitForChild("PlayerGui", 10)
-if not playerGui then
-    warn("❌ Ошибка загрузки GUI - Перезагрузи скрипт")
-    return
-end
-
-pcall(function()
-    local old = playerGui:FindFirstChild("SafeESP")
-    if old then old:Destroy() end
-end)
-
-task.wait(0.5)
+task.wait(1) -- Даем игре прогрузиться
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "SafeESP"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local success, err = pcall(function()
+    local playerGui = player:WaitForChild("PlayerGui", 10)
+    if playerGui then
+        screenGui.Parent = playerGui
+        print("✅ GUI создан")
+    else
+        error("PlayerGui не найден")
+    end
+end)
+
+if not success then
+    warn("❌ Ошибка создания GUI:", err)
+    warn("Попробуй перезагрузить скрипт")
+    return
+end
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 290)
+frame.Size = UDim2.new(0, 250, 0, 290) -- Увеличил высоту для новой кнопки
 frame.Position = UDim2.new(0.5, -125, 0.1, 0)
 frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.BorderSizePixel = 2
@@ -1842,6 +1814,7 @@ button.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Кнопка автобая
 local autoBuyButton = Instance.new("TextButton")
 autoBuyButton.Size = UDim2.new(0.9, 0, 0, 40)
 autoBuyButton.Position = UDim2.new(0.05, 0, 0, 100)
@@ -1874,6 +1847,7 @@ autoBuyButton.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Кнопка очистки списка купленных
 local clearButton = Instance.new("TextButton")
 clearButton.Size = UDim2.new(0.9, 0, 0, 35)
 clearButton.Position = UDim2.new(0.05, 0, 0, 150)
@@ -1901,13 +1875,14 @@ local info = Instance.new("TextLabel")
 info.Size = UDim2.new(0.9, 0, 0, 55)
 info.Position = UDim2.new(0.05, 0, 0, 195)
 info.BackgroundTransparency = 1
-info.Text = "✅ Safe + обход\n⚡ Мгновенное E\n🛡️ Телепорт 25 ст/сек\n🤖 Автобай\n📋 ESP авто-удаление"
+info.Text = "✅ Safe Mode + обход античита\n⚡ Мгновенное E (без задержки)\n🛡️ ПРОДВИНУТЫЙ телепорт (25 стад/сек)\n🤖 Автобай включен!\n📋 ESP только для существующих вещей"
 info.Font = Enum.Font.SourceSans
 info.TextSize = 12
 info.TextColor3 = Color3.fromRGB(200, 200, 200)
 info.TextYAlignment = Enum.TextYAlignment.Top
 info.Parent = frame
 
+-- Драг
 local dragging, dragInput, dragStart, startPos
 
 frame.InputBegan:Connect(function(input)
@@ -1937,17 +1912,45 @@ game:GetService("UserInputService").InputChanged:Connect(function(input)
     end
 end)
 
-print("=" .. string.rep("=", 48))
-print("🎯 GUI ЗАГРУЖЕН!")
-print("=" .. string.rep("=", 48))
-print("✅ Safe ESP готов")
-print("🛡️ Телепорт активен")
-print("📋 ESP авто-удаление")
-print("🤖 Автобай готов")
+print("🎉 Safe ESP загружен!")
+print("✅ С ОБХОДОМ АНТИЧИТА - защита от кика")
+print("⚡ БЕЗОПАСНЫЕ задержки - защита от античита")
+print("�️ Увеличенные интервалы для стабильной работы")
+print("🔄 ESP автоматически пропадает когда вещь исчезает!")
+print("   → Проверка каждые 0.15с + мгновенная реакция на удаление")
+print("   → Отслеживание манекенов, одежды, слотов и аксессуаров")
+print("🤖 АВТОБАЙ оптимизирован с безопасными задержками!")
+print("�️ ПРОДВИНУТЫЙ ТЕЛЕПОРТ - максимальная защита от античита!")
+print("")
+print("⏱️ ЗАДЕРЖКИ (безопасные для античита):")
+print("   • Телепорт: УМНЫЙ с имитацией человека")
+print("     - < 10 стадов: мгновенный")
+print("     - 10-30 стадов: быстрый (1с)")
+print("     - > 30 стадов: ПРОДВИНУТЫЙ ОБХОД")
+print("       → Скорость контролируется (макс 18 стад/сек)")
+print("       → Разбивка на сегменты с паузами")
+print("       → Случайные отклонения траектории")
+print("       → Имитация человеческого движения")
+print("   • Взятие предмета: 1.2с")
+print("   • Открытие GUI: 0.9с")
+print("   • Оплата: 0.7с")
+print("   • Между покупками: 0.8с")
 print("")
 print("📝 Инструкция:")
-print("1. Включить ESP")
-print("2. АВТОБАЙ")
-print("3. Очистить список")
-print("=" .. string.rep("=", 48))
-  
+print("1. Нажми 'Включить ESP' - найдет все вещи")
+print("2. Нажми 'АВТОБАЙ' - купит все безопасно")
+print("3. ESP автоматически удалится когда вещь пропадет с вешалки")
+print("")
+print("🎮 GUI в левой верхней части экрана")
+print("Готов к использованию!")
+print("")
+print("🔥 НОВЫЕ ФИЧИ:")
+print("   �️ ПРОДВИНУТЫЙ телепорт - МАКСИМАЛЬНЫЙ обход античита!")
+print("     → Контроль скорости передвижения (макс 18 стад/сек)")
+print("     → Разбивка пути на сегменты с паузами")
+print("     → Случайные отклонения для имитации человека")
+print("     → Античит видит обычное движение персонажа!")
+print("   📋 Отслеживание купленных предметов")
+print("     → После покупки предмет добавляется в список")
+print("     → Автобай не телепается к купленным предметам")
+print("     → Кнопка 'Очистить список' сбрасывает купленные")
