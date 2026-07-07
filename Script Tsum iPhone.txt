@@ -497,6 +497,74 @@ local function takeItem(slotId, slot)
     return true
 end
 
+-- Взять аксессуар (нажать E на модели аксессуара)
+local function takeAccessory(model)
+    print("📥 Беру аксессуар...")
+    
+    local prompt = nil
+    for _, desc in pairs(model:GetDescendants()) do
+        if desc:IsA("ProximityPrompt") and desc.Enabled then
+            prompt = desc
+            print("🔘 Найден ProximityPrompt")
+            break
+        end
+    end
+    
+    if not prompt then
+        print("⚠️ ProximityPrompt не найден у аксессуара!")
+        return false
+    end
+    
+    print("⚡ Мгновенно нажимаю E на аксессуаре...")
+    local success = pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt, 0)
+            print("✅ Нажал E через fireproximityprompt")
+        else
+            prompt:InputHoldBegin()
+            prompt:InputHoldEnd()
+            print("✅ Нажал E")
+        end
+    end)
+    
+    if not success then
+        print("❌ Ошибка активации ProximityPrompt")
+        return false
+    end
+    
+    task.wait(0.3)
+    print("✅ Аксессуар должен быть в корзине")
+    return true
+end
+
+-- Получить цену аксессуара
+local function getAccessoryPrice(model)
+    local price = 0
+    pcall(function()
+        if model:GetAttribute("Price") then
+            price = model:GetAttribute("Price")
+        end
+        -- Попробуем найти в родительских объектах
+        if price == 0 and model.Parent then
+            if model.Parent:GetAttribute("Price") then
+                price = model.Parent:GetAttribute("Price")
+            end
+        end
+    end)
+    return price
+end
+
+-- Получить SlotId для аксессуара
+local function getAccessorySlotId(model)
+    if model:GetAttribute("SlotId") then
+        return model:GetAttribute("SlotId")
+    end
+    if model.Parent and model.Parent:GetAttribute("SlotId") then
+        return model.Parent:GetAttribute("SlotId")
+    end
+    return model.Name
+end
+
 -- Открыть магазин NPC (нажать E на NPC)
 local function openShopNPC(npc)
     print("🛒 Открываю магазин NPC...")
@@ -772,6 +840,148 @@ local function buyItem(mannequinData)
     return true, "Успешно куплено"
 end
 
+local function buyAccessory(accessoryData)
+    if autoBuyRunning then
+        return false, "Автобай уже работает"
+    end
+    
+    autoBuyRunning = true
+    
+    local model = accessoryData.model
+    local meshId = accessoryData.meshId
+    
+    -- Проверка существования модели
+    if not model or not model.Parent then
+        autoBuyRunning = false
+        print("⚠️ Аксессуар уже не существует")
+        return false, "Аксессуар не существует"
+    end
+    
+    -- Получаем имя аксессуара
+    local item = ACCESSORIES[meshId]
+    if not item then
+        autoBuyRunning = false
+        print("⚠️ Аксессуар не найден в базе данных")
+        return false, "Аксессуар не найден в базе"
+    end
+    local itemName = item.name
+    
+    -- Проверка баланса
+    local playerMoney = getPlayerMoney()
+    local itemPrice = getAccessoryPrice(model)
+    
+    print("")
+    print("═══════════════════════════════")
+    print("🛒 ПОКУПАЮ АКСЕССУАР:", itemName)
+    print("💰 Баланс:", playerMoney, "$")
+    print("💵 Цена:", itemPrice, "$")
+    
+    if itemPrice > 0 and playerMoney < itemPrice then
+        autoBuyRunning = false
+        print("❌ НЕ ХВАТАЕТ ДЕНЕГ!")
+        print("═══════════════════════════════")
+        return false, "Недостаточно денег"
+    end
+    
+    print("✅ Денег достаточно!")
+    print("═══════════════════════════════")
+    
+    -- Получаем SlotId
+    local slotId = getAccessorySlotId(model)
+    print("🆔 SlotId:", slotId)
+    
+    -- Получаем зону
+    local zoneName = model.Parent.Name
+    print("📍 Зона:", zoneName)
+    
+    -- Шаг 1: Телепорт к аксессуару
+    print("")
+    print("🚀 ШАГ 1: Телепортируюсь к аксессуару...")
+    local accessoryPos = model:FindFirstChild("Handle") or model:FindFirstChild("Body") or model.PrimaryPart
+    if not accessoryPos then
+        autoBuyRunning = false
+        print("❌ Позиция аксессуара не найдена")
+        return false, "Позиция аксессуара не найдена"
+    end
+    
+    local targetPos = accessoryPos.Position + Vector3.new(0, 0, 1.5)
+    if not teleportTo(targetPos) then
+        autoBuyRunning = false
+        print("❌ Ошибка телепорта к аксессуару")
+        return false, "Ошибка телепорта к аксессуару"
+    end
+    print("✅ Телепортирован к аксессуару")
+    
+    task.wait(0.2)
+    
+    -- Шаг 2: Взять аксессуар (нажать E)
+    print("")
+    print("👜 ШАГ 2: Нажимаю E на аксессуаре...")
+    if not takeAccessory(model) then
+        autoBuyRunning = false
+        print("❌ Не удалось взять аксессуар")
+        return false, "Не удалось взять аксессуар"
+    end
+    print("✅ Аксессуар взят и в корзине")
+    
+    task.wait(0.3)
+    
+    -- Шаг 3: Найти NPC
+    print("")
+    print("🔍 ШАГ 3: Ищу NPC в зоне...")
+    local npc = findNPCInZone(zoneName)
+    if not npc then
+        autoBuyRunning = false
+        print("❌ NPC не найден в зоне")
+        return false, "NPC не найден в зоне"
+    end
+    print("✅ NPC найден")
+    
+    -- Шаг 4: Телепорт к NPC
+    print("")
+    print("🚀 ШАГ 4: Телепортируюсь к NPC...")
+    local npcTargetPos = npc.Position + Vector3.new(0, 0, 3)
+    if not teleportTo(npcTargetPos) then
+        autoBuyRunning = false
+        print("❌ Ошибка телепорта к NPC")
+        return false, "Ошибка телепорта к NPC"
+    end
+    print("✅ Телепортирован к NPC")
+    
+    task.wait(0.2)
+    
+    -- Шаг 5: Открыть магазин (нажать E на NPC)
+    print("")
+    print("🛒 ШАГ 5: Нажимаю E на NPC...")
+    if not openShopNPC(npc) then
+        autoBuyRunning = false
+        print("❌ Не удалось открыть магазин")
+        return false, "Не удалось открыть магазин"
+    end
+    print("✅ Магазин открыт")
+    
+    task.wait(0.2)
+    
+    -- Шаг 6: Оплата (нажать PAY)
+    print("")
+    print("💳 ШАГ 6: Нажимаю PAY...")
+    if not purchaseItem(slotId) then
+        autoBuyRunning = false
+        print("❌ Ошибка при оплате")
+        return false, "Ошибка при оплате"
+    end
+    
+    task.wait(0.2)
+    
+    autoBuyRunning = false
+    print("")
+    print("═══════════════════════════════")
+    print("✅ УСПЕШНО КУПЛЕН АКСЕССУАР:", itemName)
+    print("═══════════════════════════════")
+    print("")
+    return true, "Успешно куплено"
+end
+
 local function startAutoBuy()
     if not espEnabled then
         return false, "Сначала включи ESP!"
@@ -786,13 +996,17 @@ local function startAutoBuy()
     
     task.spawn(function()
         local mannequins = getAllMannequins()
-        local bought = 0
+        local accessories = getAllAccessories()
+        local boughtClothing = 0
+        local boughtAccessories = 0
         local skipped = 0
         
         print("🔍 Найдено вещей для покупки:", #mannequins)
+        print("🔍 Найдено аксессуаров для покупки:", #accessories)
         print("")
         
         -- Покупка вещей
+        print("👕 === ПОКУПКА ВЕЩЕЙ ===")
         for _, data in pairs(mannequins) do
             if not autoBuyEnabled then
                 print("⏸️ Автобай остановлен")
@@ -801,7 +1015,7 @@ local function startAutoBuy()
             
             local success, message = buyItem(data)
             if success then
-                bought = bought + 1
+                boughtClothing = boughtClothing + 1
             elseif message == "Недостаточно денег" then
                 skipped = skipped + 1
             end
@@ -809,10 +1023,32 @@ local function startAutoBuy()
             task.wait(0.5)
         end
         
+        -- Покупка аксессуаров
+        if autoBuyEnabled then
+            print("")
+            print("👜 === ПОКУПКА АКСЕССУАРОВ ===")
+            for _, data in pairs(accessories) do
+                if not autoBuyEnabled then
+                    print("⏸️ Автобай остановлен")
+                    break
+                end
+                
+                local success, message = buyAccessory(data)
+                if success then
+                    boughtAccessories = boughtAccessories + 1
+                elseif message == "Недостаточно денег" then
+                    skipped = skipped + 1
+                end
+                
+                task.wait(0.5)
+            end
+        end
+        
         autoBuyEnabled = false
         print("")
         print("🏁 Автобай завершен!")
-        print("✅ Куплено:", bought)
+        print("✅ Куплено вещей:", boughtClothing)
+        print("✅ Куплено аксессуаров:", boughtAccessories)
         print("⏭️ Пропущено (нет денег):", skipped)
     end)
     
