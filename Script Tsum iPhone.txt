@@ -542,36 +542,55 @@ local function purchaseItem(slotId)
     print("💳 Оплачиваю предмет, SlotId:", slotId)
     
     local playerGui = player:WaitForChild("PlayerGui")
-    task.wait(0.15)
+    task.wait(0.2)
     
     print("🔍 Ищу кнопку PAY в GUI...")
     local payButtonFound = false
+    local buttonsChecked = 0
     
     for _, gui in pairs(playerGui:GetChildren()) do
         if gui:IsA("ScreenGui") and gui.Enabled then
             for _, button in pairs(gui:GetDescendants()) do
                 if button:IsA("TextButton") and button.Visible then
+                    buttonsChecked = buttonsChecked + 1
                     local text = button.Text:upper()
                     local name = button.Name:upper()
                     
-                    if text:find("PAY") or name:find("PAY") then
-                        print("💳 Найдена кнопка PAY")
+                    -- Выводим все кнопки для отладки
+                    if buttonsChecked <= 5 then
+                        print("   Кнопка:", button.Name, "| Текст:", button.Text)
+                    end
+                    
+                    -- Ищем кнопку оплаты по разным вариантам
+                    if text:find("PAY") or text:find("ОПЛАТИТЬ") or text:find("ЗАПЛАТИТЬ") or text:find("BUY") or text:find("КУПИТЬ") or
+                       name:find("PAY") or name:find("BUY") or name:find("PURCHASE") or name:find("CONFIRM") or name:find("ЗАПЛАТИТЬ") then
+                        print("💳 ✅ Найдена кнопка оплаты:", button.Name, "| Текст:", button.Text)
                         payButtonFound = true
                         
+                        -- Метод 1: getconnections
                         pcall(function()
                             if getconnections then
                                 for _, connection in pairs(getconnections(button.MouseButton1Click)) do
                                     connection:Fire()
-                                    print("✅ Нажал PAY через getconnections")
+                                    print("✅ Нажал через getconnections")
                                 end
                             end
                         end)
                         
+                        -- Метод 2: обычный Fire
                         pcall(function()
                             button.MouseButton1Click:Fire()
+                            print("✅ Нажал через MouseButton1Click:Fire()")
                         end)
                         
-                        task.wait(0.7)
+                        -- Метод 3: MouseButton1Down
+                        pcall(function()
+                            button.MouseButton1Down:Fire()
+                            button.MouseButton1Up:Fire()
+                            print("✅ Нажал через MouseButton1Down/Up")
+                        end)
+                        
+                        task.wait(0.5)
                         break
                     end
                 end
@@ -580,7 +599,14 @@ local function purchaseItem(slotId)
         end
     end
     
-    task.wait(0.15)
+    if not payButtonFound then
+        print("⚠️ Кнопка PAY не найдена! Проверено кнопок:", buttonsChecked)
+        print("⚠️ Попытка вызвать ремоут напрямую без GUI...")
+    else
+        print("✅ Кнопка PAY нажата")
+    end
+    
+    task.wait(0.3)
     print("📡 Вызываю ремоут подтверждения покупки...")
     local success, result = pcall(function()
         local args = {"ShopPurchase", {slotId}}
