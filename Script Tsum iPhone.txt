@@ -1116,17 +1116,17 @@
             
             task.wait(0.2)
             
-            -- Шаг 2: Взять аксессуар (нажать E)
+            -- Шаг 2: Взять аксессуар (ЗАЖАТЬ E/TAP)
             print("")
-            print("👜 ШАГ 2: Нажимаю E на аксессуаре...")
+            print("👜 ШАГ 2: ЗАЖИМАЮ кнопку на аксессуаре...")
             
             local takeSuccess = false
             if slot then
                 -- Если есть слот, используем его
                 takeSuccess = takeAccessory(slotId, slot)
             else
-                -- Если слота нет, пробуем взять через модель напрямую
-                print("⚠️ Слота нет, пробую взять через модель...")
+                -- Если слота нет, пробуем взять через модель напрямую (ЗАЖИМАЕМ)
+                print("⚠️ Слота нет, пробую взять через модель с удержанием...")
                 
                 -- Ищем ProximityPrompt в модели
                 local prompt = nil
@@ -1134,24 +1134,29 @@
                     if desc:IsA("ProximityPrompt") and desc.Enabled then
                         prompt = desc
                         print("🔘 Найден ProximityPrompt в модели")
+                        print("⏱️ Время удержания:", prompt.HoldDuration, "сек")
                         break
                     end
                 end
                 
                 if prompt then
+                    print("⚡ ЗАЖИМАЮ кнопку (удержание)...")
                     local success = pcall(function()
                         if fireproximityprompt then
-                            fireproximityprompt(prompt, 0)
-                            print("✅ Нажал E через fireproximityprompt")
+                            -- Используем удержание для fireproximityprompt
+                            fireproximityprompt(prompt, prompt.HoldDuration or 0)
+                            print("✅ Зажал через fireproximityprompt на", prompt.HoldDuration, "сек")
                         else
+                            -- Имитируем удержание
                             prompt:InputHoldBegin()
+                            task.wait(prompt.HoldDuration or 1) -- Ждём время удержания
                             prompt:InputHoldEnd()
-                            print("✅ Нажал E через InputHold")
+                            print("✅ Зажал через InputHold на", prompt.HoldDuration, "сек")
                         end
                     end)
                     
                     if success then
-                        task.wait(0.3)
+                        task.wait(0.5) -- Дополнительное ожидание
                         takeSuccess = true
                     end
                 else
