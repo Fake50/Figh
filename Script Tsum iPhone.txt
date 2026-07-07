@@ -282,10 +282,35 @@
         local results = {}
         for _, zone in pairs(workspace:GetChildren()) do
             if zone:IsA("Model") and zone.Name:match("Shop_ShopZone") then
-                -- Проверяем ItemSlots для аксессуаров
-                local slots = zone:FindFirstChild("ItemSlots")
-                if slots then
-                    for _, slot in pairs(slots:GetChildren()) do
+                -- Проверяем AccessorySlots для аксессуаров
+                local accessorySlots = zone:FindFirstChild("AccessorySlots")
+                if accessorySlots then
+                    for _, slot in pairs(accessorySlots:GetChildren()) do
+                        if slot.Name:match("Slot") then
+                            for _, child in pairs(slot:GetChildren()) do
+                                if child:IsA("Model") and child.Name:match("^M_") then
+                                    local target = child:FindFirstChild("Handle") or child:FindFirstChild("Body")
+                                    if target and target:IsA("MeshPart") and target.MeshId then
+                                        local id = target.MeshId:match("%d+")
+                                        if id and ACCESSORIES[id] then
+                                            table.insert(results, {
+                                                model = child,
+                                                meshId = id,
+                                                slot = slot
+                                            })
+                                            print("🔍 Найден аксессуар в слоте:", ACCESSORIES[id].name, "| Слот:", slot.Name)
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                -- Также проверяем ItemSlots (на всякий случай)
+                local itemSlots = zone:FindFirstChild("ItemSlots")
+                if itemSlots then
+                    for _, slot in pairs(itemSlots:GetChildren()) do
                         if slot.Name:match("Slot_") then
                             for _, child in pairs(slot:GetChildren()) do
                                 if child:IsA("Model") and child.Name:match("^M_") then
@@ -298,6 +323,7 @@
                                                 meshId = id,
                                                 slot = slot
                                             })
+                                            print("🔍 Найден аксессуар в ItemSlots:", ACCESSORIES[id].name, "| Слот:", slot.Name)
                                         end
                                     end
                                 end
@@ -318,6 +344,7 @@
                                     meshId = id,
                                     slot = nil
                                 })
+                                print("🔍 Найден аксессуар вне слотов:", ACCESSORIES[id].name)
                             end
                         end
                     end
@@ -523,10 +550,39 @@
         return true
     end
 
-    -- Взять аксессуар (нажать E на модели аксессуара)
-    local function takeAccessory(model)
+    -- Взять аксессуар через RemoteEvent
+    local function takeAccessoryRemote(slot)
+        print("📥 Беру аксессуар через RemoteEvent...")
+        print("🔧 Слот:", slot:GetFullName())
+        
+        local success, err = pcall(function()
+            game:GetService("ReplicatedStorage"):WaitForChild("ShopRemotes"):WaitForChild("TakeItemMobile"):FireServer(slot)
+        end)
+        
+        if success then
+            print("✅ Аксессуар взят через RemoteEvent!")
+            task.wait(0.3)
+            return true
+        else
+            print("❌ Ошибка при вызове RemoteEvent:", err)
+            return false
+        end
+    end
+
+    -- Взять аксессуар (нажать E на модели аксессуара) - запасной метод
+    local function takeAccessory(model, slot)
         print("📥 Беру аксессуар...")
         
+        -- Сначала пробуем через RemoteEvent если есть слот
+        if slot then
+            print("🔄 Пробую взять через RemoteEvent...")
+            if takeAccessoryRemote(slot) then
+                return true
+            end
+            print("⚠️ RemoteEvent не сработал, пробую через ProximityPrompt...")
+        end
+        
+        -- Если RemoteEvent не сработал, пробуем через ProximityPrompt
         local prompt = nil
         for _, desc in pairs(model:GetDescendants()) do
             if desc:IsA("ProximityPrompt") and desc.Enabled then
@@ -958,16 +1014,19 @@
         
         task.wait(0.2)
         
-        -- Шаг 2: Взять аксессуар (нажать E)
+        -- Шаг 2: Взять аксессуар (нажать E или RemoteEvent)
         print("")
-        print("👜 ШАГ 2: Нажимаю E на аксессуаре...")
+        print("👜 ШАГ 2: Беру аксессуар...")
         local takeSuccess = false
+        
         if slot then
-            -- Если есть слот, используем takeItem как для вещей
-            takeSuccess = takeItem(slotId, slot)
+            -- Если есть слот, используем RemoteEvent
+            print("🔄 Использую RemoteEvent для аксессуара...")
+            takeSuccess = takeAccessoryRemote(slot)
         else
-            -- Иначе используем takeAccessory
-            takeSuccess = takeAccessory(model)
+            -- Если слота нет, пробуем через ProximityPrompt
+            print("🔄 Использую ProximityPrompt для аксессуара...")
+            takeSuccess = takeAccessory(model, nil)
         end
         
         if not takeSuccess then
