@@ -1116,10 +1116,59 @@
             
             task.wait(0.2)
             
-            -- Шаг 2: Взять аксессуар (нажать E) - КАК ВЕЩИ
+            -- Шаг 2: Взять аксессуар (нажать E)
             print("")
             print("👜 ШАГ 2: Нажимаю E на аксессуаре...")
-            if not takeAccessory(slotId, slot) then
+            
+            local takeSuccess = false
+            if slot then
+                -- Если есть слот, используем его
+                takeSuccess = takeAccessory(slotId, slot)
+            else
+                -- Если слота нет, пробуем взять через модель напрямую
+                print("⚠️ Слота нет, пробую взять через модель...")
+                
+                -- Ищем ProximityPrompt в модели
+                local prompt = nil
+                for _, desc in pairs(model:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") and desc.Enabled then
+                        prompt = desc
+                        print("🔘 Найден ProximityPrompt в модели")
+                        break
+                    end
+                end
+                
+                if prompt then
+                    local success = pcall(function()
+                        if fireproximityprompt then
+                            fireproximityprompt(prompt, 0)
+                            print("✅ Нажал E через fireproximityprompt")
+                        else
+                            prompt:InputHoldBegin()
+                            prompt:InputHoldEnd()
+                            print("✅ Нажал E через InputHold")
+                        end
+                    end)
+                    
+                    if success then
+                        task.wait(0.3)
+                        takeSuccess = true
+                    end
+                else
+                    print("⚠️ ProximityPrompt не найден в модели, пробую RemoteEvent...")
+                    -- Пробуем через RemoteEvent с моделью
+                    local remoteSuccess = pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("ShopRemotes"):WaitForChild("TakeItemMobile"):FireServer(model)
+                    end)
+                    if remoteSuccess then
+                        task.wait(0.3)
+                        takeSuccess = true
+                        print("✅ Взял через RemoteEvent с моделью")
+                    end
+                end
+            end
+            
+            if not takeSuccess then
                 autoBuyRunning = false
                 print("❌ Не удалось взять аксессуар")
                 return false, "Не удалось взять аксессуар"
