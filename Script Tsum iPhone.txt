@@ -656,58 +656,49 @@
         -- Взять аксессуар из слота (РАБОТАЕТ НА ПК И ТЕЛЕФОНЕ)
         local function takeAccessory(slotId, slot)
             print("📥 Беру аксессуар из слота, SlotId:", slotId)
+            print("📂 Полный путь слота:", slot:GetFullName())
             
-            -- Метод 1: Пробуем через RemoteEvent (работает на телефоне и ПК)
+            -- Метод 1: Пробуем через RemoteEvent TakeItemMobile (для телефона и ПК)
             local success1 = pcall(function()
                 print("🔄 Пробую через TakeItemMobile RemoteEvent...")
+                -- Передаём сам слот как в примере
                 game:GetService("ReplicatedStorage"):WaitForChild("ShopRemotes"):WaitForChild("TakeItemMobile"):FireServer(slot)
                 print("✅ Взял через TakeItemMobile")
             end)
             
             if success1 then
-                task.wait(0.3)
+                task.wait(0.5)
                 return true
             end
             
             print("⚠️ TakeItemMobile не сработал, пробую через ProximityPrompt...")
             
-            -- Метод 2: Через ProximityPrompt (запасной метод)
+            -- Метод 2: Через ProximityPrompt с удержанием (запасной метод)
             local prompt = nil
             for _, desc in pairs(slot:GetDescendants()) do
                 if desc:IsA("ProximityPrompt") and desc.Enabled then
                     prompt = desc
                     print("🔘 Найден ProximityPrompt")
+                    print("⏱️ Время удержания:", prompt.HoldDuration, "сек")
                     break
                 end
             end
             
             if not prompt then
                 print("⚠️ ProximityPrompt не найден в слоте!")
-                
-                -- Метод 3: Пробуем другой RemoteEvent
-                print("🔄 Пробую через TakeItem RemoteEvent...")
-                local success3 = pcall(function()
-                    game:GetService("ReplicatedStorage"):WaitForChild("ShopRemotes"):WaitForChild("TakeItem"):FireServer(slot)
-                    print("✅ Взял через TakeItem")
-                end)
-                
-                if success3 then
-                    task.wait(0.3)
-                    return true
-                end
-                
                 return false
             end
             
-            print("⚡ Мгновенно нажимаю E на аксессуаре...")
+            print("⚡ ЗАЖИМАЮ кнопку на аксессуаре...")
             local success2 = pcall(function()
                 if fireproximityprompt then
-                    fireproximityprompt(prompt, 0)
-                    print("✅ Нажал E через fireproximityprompt")
+                    fireproximityprompt(prompt, prompt.HoldDuration or 0)
+                    print("✅ Зажал E через fireproximityprompt на", prompt.HoldDuration, "сек")
                 else
                     prompt:InputHoldBegin()
+                    task.wait(prompt.HoldDuration or 1)
                     prompt:InputHoldEnd()
-                    print("✅ Нажал E через InputHold")
+                    print("✅ Зажал E через InputHold на", prompt.HoldDuration, "сек")
                 end
             end)
             
@@ -716,7 +707,7 @@
                 return false
             end
             
-            task.wait(0.3)
+            task.wait(0.5)
             print("✅ Аксессуар должен быть в корзине")
             return true
         end
