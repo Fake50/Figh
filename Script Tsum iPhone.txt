@@ -538,6 +538,24 @@ local function tweenToObject(targetObj)
     return true
 end
 
+-- Отладка структуры объекта
+local function debugObject(obj, depth)
+    depth = depth or 0
+    local indent = string.rep("  ", depth)
+    
+    print(indent .. "┣ " .. obj.Name .. " (" .. obj.ClassName .. ")")
+    
+    if depth < 2 then
+        for _, child in pairs(obj:GetChildren()) do
+            if child:IsA("ClickDetector") or child:IsA("ProximityPrompt") or 
+               child:IsA("Pants") or child:IsA("Shirt") or 
+               child:IsA("BasePart") or child:IsA("Model") then
+                debugObject(child, depth + 1)
+            end
+        end
+    end
+end
+
 -- Симуляция клика по объекту
 local function clickObject(targetObj)
     print("[AutoBuy] 🖱️ Кликаю по объекту: " .. targetObj.Name)
@@ -547,40 +565,114 @@ local function clickObject(targetObj)
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return false end
     
-    -- Находим ClickDetector
-    local clickDetector = targetObj:FindFirstChildOfClass("ClickDetector", true)
+    -- МЕТОД 1: Поиск ClickDetector (во всех потомках)
+    local clickDetector = nil
+    for _, descendant in pairs(targetObj:GetDescendants()) do
+        if descendant:IsA("ClickDetector") then
+            clickDetector = descendant
+            break
+        end
+    end
+    
     if clickDetector then
-        print("[AutoBuy] ✅ Найден ClickDetector, активирую...")
-        fireclickdetector(clickDetector)
-        task.wait(0.2)
+        print("[AutoBuy] ✅ Найден ClickDetector: " .. clickDetector:GetFullName())
+        pcall(function()
+            fireclickdetector(clickDetector)
+        end)
+        task.wait(0.3)
         return true
     end
     
-    -- Если нет ClickDetector, симулируем клик мышкой
-    print("[AutoBuy] Симулирую клик мышкой...")
-    local camera = workspace.CurrentCamera
+    -- МЕТОД 2: Поиск ProximityPrompt
+    local proximityPrompt = nil
+    for _, descendant in pairs(targetObj:GetDescendants()) do
+        if descendant:IsA("ProximityPrompt") then
+            proximityPrompt = descendant
+            break
+        end
+    end
+    
+    if proximityPrompt then
+        print("[AutoBuy] ✅ Найден ProximityPrompt: " .. proximityPrompt:GetFullName())
+        pcall(function()
+            fireproximityprompt(proximityPrompt)
+        end)
+        task.wait(0.3)
+        return true
+    end
+    
+    -- МЕТОД 3: Поиск конкретных частей предмета (Pants/Shirt внутри модели)
+    local clickablePart = nil
+    for _, descendant in pairs(targetObj:GetDescendants()) do
+        if descendant:IsA("Pants") or descendant:IsA("Shirt") then
+            -- Ищем ClickDetector в родительской части
+            local parentPart = descendant.Parent
+            if parentPart then
+                local cd = parentPart:FindFirstChildOfClass("ClickDetector")
+                if cd then
+                    clickDetector = cd
+                    clickablePart = parentPart
+                    break
+                end
+            end
+        end
+    end
+    
+    if clickDetector and clickablePart then
+        print("[AutoBuy] ✅ Найден ClickDetector в части одежды: " .. clickablePart.Name)
+        pcall(function()
+            fireclickdetector(clickDetector)
+        end)
+        task.wait(0.3)
+        return true
+    end
+    
+    -- МЕТОД 4: Симуляция клика мышкой через VirtualUser
+    print("[AutoBuy] Пробую VirtualUser...")
     local targetPart = targetObj
     if targetObj:IsA("Model") then
         targetPart = targetObj.PrimaryPart or targetObj:FindFirstChildWhichIsA("BasePart")
     end
     
     if targetPart and targetPart:IsA("BasePart") then
+        local camera = workspace.CurrentCamera
+        local oldCFrame = camera.CFrame
+        
         -- Наводим камеру на объект
-        local targetPos = targetPart.Position
-        local screenPos, onScreen = camera:WorldToScreenPoint(targetPos)
+        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+        task.wait(0.1)
+        
+        local screenPos, onScreen = camera:WorldToScreenPoint(targetPart.Position)
         
         if onScreen then
-            -- Симулируем клик мышкой
-            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, true, game, 0)
-            task.wait(0.05)
-            VirtualInputManager:SendMouseButtonEvent(screenPos.X, screenPos.Y, 0, false, game, 0)
-            print("[AutoBuy] ✅ Клик выполнен")
+            -- Используем VirtualUser для клика
+            local VirtualUser = game:GetService("VirtualUser")
+            pcall(function()
+                VirtualUser:ClickButton1(Vector2.new(screenPos.X, screenPos.Y))
+            end)
+            print("[AutoBuy] ✅ Клик через VirtualUser выполнен")
             task.wait(0.2)
+            
+            camera.CFrame = oldCFrame
             return true
         end
+        
+        camera.CFrame = oldCFrame
     end
     
-    print("[AutoBuy] ⚠️ Не удалось кликнуть по объекту")
+    -- МЕТОД 5: Симуляция через mouse1click
+    print("[AutoBuy] Пробую mouse1click...")
+    local mouse = player:GetMouse()
+    if mouse then
+        pcall(function()
+            mouse.Target = targetPart
+            mouse1click()
+        end)
+        task.wait(0.2)
+        return true
+    end
+    
+    print("[AutoBuy] ⚠️ Не удалось кликнуть по объекту (все методы провалились)")
     return false
 end
 
@@ -657,6 +749,8 @@ local function autoBuyCycle()
     
     local targetItem = items[1]
     print(string.format("[AutoBuy] 🎯 Цель: %s (%s)", targetItem.name, targetItem.rarity))
+    print("[AutoBuy] 📦 Структура объекта:")
+    debugObject(targetItem.object)
     
     -- 3. Летим к предмету
     if not tweenToObject(targetItem.object) then
@@ -664,9 +758,10 @@ local function autoBuyCycle()
         return
     end
     
-    task.wait(0.3)
+    task.wait(0.5)  -- Увеличил задержку
     
     -- 4. Кликаем по предмету (добавляется в корзину)
+    print("[AutoBuy] 🖱️ Попытка взять предмет...")
     if not clickObject(targetItem.object) then
         print("[AutoBuy] ❌ Не удалось кликнуть по предмету")
         return
