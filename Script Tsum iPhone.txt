@@ -374,9 +374,10 @@ end
 -- ESP
 -- ============================================
 local function clearESP()
+    -- Ищем и удаляем все ESP Billboard
     for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:FindFirstChild("ESP_Billboard") then
-            obj.ESP_Billboard:Destroy()
+        if obj.Name == "ESP_Billboard" and obj:IsA("BillboardGui") then
+            obj:Destroy()
         end
     end
 end
@@ -414,16 +415,42 @@ local function createESP(obj, item)
     if not obj or not obj.Parent then return end
     if obj:FindFirstChild("ESP_Billboard") then return end
 
+    -- Находим самую высокую видимую часть предмета
+    local targetPart = nil
+    local highestY = -math.huge
+    
+    if obj:IsA("Model") then
+        -- Проходим по всем частям модели и находим самую высокую
+        for _, part in pairs(obj:GetDescendants()) do
+            if part:IsA("BasePart") and part.Transparency < 1 then
+                local partY = part.Position.Y + (part.Size.Y / 2)
+                if partY > highestY then
+                    highestY = partY
+                    targetPart = part
+                end
+            end
+        end
+        
+        -- Если не нашли прозрачные части, берем PrimaryPart или первую BasePart
+        if not targetPart then
+            targetPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+        end
+    elseif obj:IsA("BasePart") then
+        targetPart = obj
+    end
+    
+    if not targetPart then return end
+
     local distance = getDistance(obj)
     local distText = distance and string.format("%.0f м", distance) or ""
 
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESP_Billboard"
-    billboard.Adornee = obj
+    billboard.Adornee = targetPart  -- Прикрепляем к самой высокой части
     billboard.Size = UDim2.new(0, 300, 0, 70)
-    billboard.StudsOffset = Vector3.new(0, 4, 0)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)  -- Поднимаем выше
     billboard.AlwaysOnTop = true
-    billboard.Parent = obj
+    billboard.Parent = targetPart  -- Родитель - сама часть, а не модель
 
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
