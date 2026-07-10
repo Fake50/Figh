@@ -286,11 +286,37 @@ local function findItemById(assetId)
     return ALL_ITEMS[tostring(assetId)]
 end
 
+-- Проверка, является ли объект частью игрока
+local function isPlayerModel(obj)
+    -- Поднимаемся по иерархии и проверяем, не находится ли объект в игроке
+    local current = obj
+    while current and current ~= workspace do
+        -- Проверяем, есть ли Humanoid (признак персонажа)
+        if current:FindFirstChildOfClass("Humanoid") then
+            -- Проверяем, принадлежит ли персонаж игроку
+            for _, player in pairs(Players:GetPlayers()) do
+                if player.Character == current then
+                    return true
+                end
+            end
+        end
+        current = current.Parent
+    end
+    return false
+end
+
 local function findAllItems()
     local results = {}
+    local processedModels = {} -- Чтобы не добавлять дубликаты
+    
     -- Ищем по всем объектам в workspace
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Pants") or obj:IsA("Shirt") or obj:IsA("Accessory") then
+            -- ВАЖНО: Пропускаем объекты, которые находятся в игроках
+            if isPlayerModel(obj) then
+                continue
+            end
+            
             local assetId = nil
             
             -- Получаем AssetId из Pants/Shirt
@@ -302,6 +328,8 @@ local function findAllItems()
                 local handle = obj.Handle
                 if handle:FindFirstChildOfClass("SpecialMesh") then
                     assetId = string.match(tostring(handle:FindFirstChildOfClass("SpecialMesh").MeshId), "%d+")
+                elseif handle:FindFirstChildOfClass("MeshPart") then
+                    assetId = string.match(tostring(handle:FindFirstChildOfClass("MeshPart").MeshId), "%d+")
                 end
             end
             
@@ -318,7 +346,9 @@ local function findAllItems()
                         end
                     end
                     
-                    if target then
+                    -- Проверяем, что это не игрок и не дубликат
+                    if target and not isPlayerModel(target) and not processedModels[target] then
+                        processedModels[target] = true
                         table.insert(results, {
                             object = target,
                             name = itemData.name,
@@ -327,6 +357,7 @@ local function findAllItems()
                             rarity = itemData.rarity,
                             type = "Item",
                             quality = "",
+                            assetId = assetId,
                         })
                     end
                 end
