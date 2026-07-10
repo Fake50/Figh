@@ -713,53 +713,69 @@ local function clickObject(targetObj)
     return true  -- Возвращаем true чтобы продолжить
 end
 
--- Поиск Seller в той же зоне магазина
+-- Поиск Seller в той же зоне магазина (или ближайшего)
 local function findSellerInShop(itemObj)
-    print("[AutoBuy] 🔍 Ищу Seller в магазине...")
+    print("[AutoBuy] 🔍 Ищу Seller...")
     
-    -- Поднимаемся по иерархии до магазина
-    local current = itemObj
-    local shopModel = nil
+    -- СПОСОБ 1: Глобальный поиск всех Seller в workspace
+    print("[AutoBuy] 🌍 Глобальный поиск всех Seller...")
+    local allSellers = {}
     
-    -- Ищем родительский объект магазина (обычно это Model в ActiveShops)
-    while current and current.Parent do
-        if current.Parent.Name == "ActiveShops" then
-            shopModel = current
-            break
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name == "Seller" and obj:IsA("Model") and obj:FindFirstChild("HumanoidRootPart") then
+            table.insert(allSellers, obj)
+            print("[AutoBuy] 📍 Найден Seller: " .. obj:GetFullName())
         end
-        current = current.Parent
     end
     
-    if not shopModel then
-        print("[AutoBuy] ❌ Не удалось определить магазин предмета")
+    if #allSellers == 0 then
+        print("[AutoBuy] ❌ Не найдено ни одного Seller в игре!")
         return nil
     end
     
-    print("[AutoBuy] 🏪 Магазин: " .. shopModel.Name)
+    print("[AutoBuy] ✅ Найдено Seller: " .. #allSellers)
     
-    -- Ищем Seller в этом магазине
-    local seller = nil
+    -- Находим позицию предмета
+    local itemPos = nil
+    if itemObj:IsA("Model") then
+        if itemObj.PrimaryPart then
+            itemPos = itemObj.PrimaryPart.Position
+        else
+            local part = itemObj:FindFirstChildWhichIsA("BasePart")
+            if part then itemPos = part.Position end
+        end
+    elseif itemObj:IsA("BasePart") then
+        itemPos = itemObj.Position
+    end
     
-    -- Проверяем структуру: Магазин -> NPC -> Seller
-    local npcFolder = shopModel:FindFirstChild("NPC")
-    if npcFolder then
-        seller = npcFolder:FindFirstChild("Seller")
-        if seller then
-            print("[AutoBuy] ✅ Найден Seller в NPC папке")
-            return seller
+    if not itemPos then
+        print("[AutoBuy] ❌ Не удалось определить позицию предмета")
+        -- Возвращаем первого найденного Seller
+        return allSellers[1]
+    end
+    
+    -- Выбираем ближайшего Seller
+    local closestSeller = nil
+    local closestDist = math.huge
+    
+    for _, seller in pairs(allSellers) do
+        local sellerPos = seller.HumanoidRootPart.Position
+        local dist = (itemPos - sellerPos).Magnitude
+        
+        print(string.format("[AutoBuy] 📏 Seller дистанция: %.0f м", dist))
+        
+        if dist < closestDist then
+            closestDist = dist
+            closestSeller = seller
         end
     end
     
-    -- Альтернативный поиск: ищем по всем детям магазина
-    for _, child in pairs(shopModel:GetDescendants()) do
-        if child.Name == "Seller" and (child:IsA("Model") or child:IsA("Part")) then
-            print("[AutoBuy] ✅ Найден Seller в магазине (альтернативный поиск)")
-            seller = child
-            return seller
-        end
+    if closestSeller then
+        print(string.format("[AutoBuy] ✅✅✅ Выбран ближайший Seller (%.0f м)", closestDist))
+        return closestSeller
     end
     
-    print("[AutoBuy] ❌ Seller не найден в магазине " .. shopModel.Name)
+    print("[AutoBuy] ❌ Не удалось выбрать Seller")
     return nil
 end
 
