@@ -1400,11 +1400,112 @@ local function pressE(barigaNPC)
     return true -- Возвращаем true чтобы продолжить, GUI может открыться
 end
 
--- Получение инвентаря и продажа всех предметов через виртуальные клики GUI
+-- Получение инвентаря и продажа всех предметов через RemoteEvents
 local function sellAllItems()
-    print("[AutoSell] 📦 Начинаю продажу через GUI...")
+    print("[AutoSell] 📦 Начинаю продажу через RemoteEvents...")
     
-    local PlayerGui = player:WaitForChild("PlayerGui")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    
+    -- Шаг 1 и 2: Запрашиваем инвентарь ДВАЖДЫ (как в примере)
+    print("[AutoSell] 🔄 Шаг 1-2: Запрашиваю инвентарь (2 раза)...")
+    pcall(function()
+        ReplicatedStorage:WaitForChild("InventoryRemotes"):WaitForChild("RequestInventory"):FireServer()
+    end)
+    
+    pcall(function()
+        ReplicatedStorage:WaitForChild("InventoryRemotes"):WaitForChild("RequestInventory"):FireServer()
+    end)
+    
+    task.wait(0.5)
+    
+    -- Шаг 3: Получаем инвентарь Бариги (первый раз)
+    print("[AutoSell] 🔄 Шаг 3: Получаю инвентарь Бариги...")
+    local barigaInventory = nil
+    local success = pcall(function()
+        barigaInventory = ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("GetBarigaInventory"):InvokeServer()
+    end)
+    
+    if not success or not barigaInventory or type(barigaInventory) ~= "table" then
+        print("[AutoSell] ❌ Ошибка получения инвентаря")
+        return false
+    end
+    
+    -- Собираем все ID предметов
+    local itemIds = {}
+    for itemId, _ in pairs(barigaInventory) do
+        table.insert(itemIds, tostring(itemId))
+    end
+    
+    if #itemIds == 0 then
+        print("[AutoSell] ⚠️ Инвентарь пуст")
+        pcall(function()
+            ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("CloseBariga"):FireServer()
+        end)
+        return false
+    end
+    
+    print(string.format("[AutoSell] ✅ Найдено предметов: %d", #itemIds))
+    print("[AutoSell] IDs:", table.concat(itemIds, ", "))
+    
+    -- Шаг 4: Получаем оффер с unpack
+    print("[AutoSell] 💰 Шаг 4: Получаю оффер...")
+    local offer = nil
+    local successOffer = pcall(function()
+        local args = {itemIds}
+        offer = ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("GetBarigaOffer"):InvokeServer(unpack(args))
+    end)
+    
+    if not successOffer then
+        print("[AutoSell] ❌ Ошибка получения оффера")
+        pcall(function()
+            ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("CloseBariga"):FireServer()
+        end)
+        return false
+    end
+    
+    print("[AutoSell] ✅ Оффер получен:", tostring(offer))
+    task.wait(0.3)
+    
+    -- Шаг 5: Подтверждаем продажу с unpack
+    print("[AutoSell] 💵 Шаг 5: Подтверждаю продажу...")
+    local successSell = pcall(function()
+        local args = {true}
+        ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("ConfirmBarigaSale"):FireServer(unpack(args))
+    end)
+    
+    if not successSell then
+        print("[AutoSell] ❌ Ошибка подтверждения продажи")
+        pcall(function()
+            ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("CloseBariga"):FireServer()
+        end)
+        return false
+    end
+    
+    task.wait(0.5)
+    
+    -- Шаг 6: Получаем инвентарь Бариги (второй раз) - как в примере
+    print("[AutoSell] 🔄 Шаг 6: Получаю инвентарь Бариги (второй раз)...")
+    pcall(function()
+        ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("GetBarigaInventory"):InvokeServer()
+    end)
+    
+    task.wait(0.3)
+    
+    -- Шаг 7: Закрываем GUI Бариги
+    print("[AutoSell] 🚪 Шаг 7: Закрываю GUI Бариги...")
+    pcall(function()
+        ReplicatedStorage:WaitForChild("BarigaRemotes"):WaitForChild("CloseBariga"):FireServer()
+    end)
+    
+    autoSellCounter = autoSellCounter + 1
+    print("[AutoSell] ✅✅✅ ПРОДАЖА ЗАВЕРШЕНА! ✅✅✅")
+    print(string.format("[AutoSell] 📈 Всего продаж: %d", autoSellCounter))
+    
+    return true
+end
+
+-- Основной цикл автоселла
+local function autoSellCycle()
     
     -- Ждем появления GUI (он должен быть открыт после pressE)
     task.wait(1.5)
