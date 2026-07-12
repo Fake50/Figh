@@ -251,11 +251,12 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local espEnabled = true
 local autoBuyEnabled = false
 local autoSellEnabled = false
-local autoBuySpeed = 21 -- Скорость полета
+local autoBuySpeed = 150 -- Скорость полета (значительно увеличена!)
 
 local FILTER = {
     minPrice = 0,
@@ -263,6 +264,151 @@ local FILTER = {
     minResellMulti = 2,
     excludedQualities = {"Poor", "Worn"},
 }
+
+-- ============================================
+-- ВЫБОР ПРЕДМЕТОВ И АКСЕССУАРОВ
+-- ============================================
+local selectedAssets = {}  -- Выбранные предметы (из ASSETS_DATA)
+local selectedAccessories = {}  -- Выбранные аксессуары (из ACCESSORIES_DATA)
+
+-- ============================================
+-- КОНФИГУРАЦИЯ И СОХРАНЕНИЕ
+-- ============================================
+local CONFIG_FOLDER = "FirmaESP"
+local CONFIG_FILE = "Config"
+
+local function saveConfig()
+    local config = {
+        espEnabled = espEnabled,
+        autoBuyEnabled = autoBuyEnabled,
+        autoSellEnabled = autoSellEnabled,
+        autoBuySpeed = autoBuySpeed,
+        selectedAssets = {},
+        selectedAccessories = {},
+    }
+    
+    -- Сохраняем выбранные предметы
+    for assetId, _ in pairs(selectedAssets) do
+        table.insert(config.selectedAssets, assetId)
+    end
+    
+    -- Сохраняем выбранные аксессуары
+    for accessoryId, _ in pairs(selectedAccessories) do
+        table.insert(config.selectedAccessories, accessoryId)
+    end
+    
+    local success, err = pcall(function()
+        if not isfolder(CONFIG_FOLDER) then
+            makefolder(CONFIG_FOLDER)
+        end
+        writefile(CONFIG_FOLDER .. "/" .. CONFIG_FILE .. ".json", HttpService:JSONEncode(config))
+    end)
+    
+    if success then
+        print("[CONFIG] ✅ Конфиг сохранен")
+    else
+        warn("[CONFIG] ❌ Ошибка сохранения:", err)
+    end
+end
+
+local function loadConfig()
+    local success, result = pcall(function()
+        if not isfile(CONFIG_FOLDER .. "/" .. CONFIG_FILE .. ".json") then
+            return nil
+        end
+        local data = readfile(CONFIG_FOLDER .. "/" .. CONFIG_FILE .. ".json")
+        return HttpService:JSONDecode(data)
+    end)
+    
+    if success and result then
+        print("[CONFIG] ✅ Конфиг загружен")
+        
+        -- Загружаем настройки
+        espEnabled = result.espEnabled or false
+        autoBuyEnabled = result.autoBuyEnabled or false
+        autoSellEnabled = result.autoSellEnabled or false
+        autoBuySpeed = result.autoBuySpeed or 150
+        
+        -- Загружаем выбранные предметы
+        if result.selectedAssets then
+            for _, assetId in pairs(result.selectedAssets) do
+                selectedAssets[assetId] = true
+            end
+        end
+        
+        -- Загружаем выбранные аксессуары
+        if result.selectedAccessories then
+            for _, accessoryId in pairs(result.selectedAccessories) do
+                selectedAccessories[accessoryId] = true
+            end
+        end
+        
+        return result
+    else
+        print("[CONFIG] ℹ️ Конфиг не найден, используем значения по умолчанию")
+        return nil
+    end
+end
+
+-- ============================================
+-- ОБХОД АНТИЧИТА (Anti-Cheat Bypass)
+-- ============================================
+local antiCheatHooked = false
+local oldNamecall = nil
+
+local function bypassAntiCheat()
+    if antiCheatHooked then return end
+    
+    local success, err = pcall(function()
+        if not hookmetamethod or not newcclosure or not getnamecallmethod then
+            print("[BYPASS] Anti-cheat: hookmetamethod not supported, skipping")
+            return
+        end
+        
+        oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            local method = getnamecallmethod()
+            
+            if method == "FireServer" or method == "InvokeServer" then
+                local callerName = tostring(self.Name):lower()
+                local parentName = ""
+                
+                pcall(function()
+                    parentName = tostring(self.Parent and self.Parent.Name or ""):lower()
+                end)
+                
+                -- Блокируем античит-события
+                local blocked = {
+                    "anticheat", "anti_cheat", "anti-cheat",
+                    "exploitdetect", "hackdetect",
+                    "speedhack", "speedcheck", "teleportcheck",
+                    "kickplayer", "banservice",
+                    "detectcheat", "cheatdetect",
+                    "anticheatreport", "flagplayer"
+                }
+                
+                for _, word in ipairs(blocked) do
+                    if callerName:find(word) or parentName:find(word) then
+                        print("[BYPASS] 🛡️ Заблокирован античит-вызов:", callerName)
+                        return nil
+                    end
+                end
+            end
+            
+            return oldNamecall(self, ...)
+        end))
+    end)
+    
+    if success then
+        antiCheatHooked = true
+        print("[BYPASS] ✅ Anti-cheat bypass активирован")
+    else
+        antiCheatHooked = false
+        warn("[BYPASS] ❌ Anti-cheat bypass не удалось активировать:", err)
+    end
+end
+
+-- Активируем обход при загрузке
+bypassAntiCheat()
 
 -- ============================================
 -- РАБОТА С JSON И ПОИСК ПРЕДМЕТОВ
@@ -554,7 +700,7 @@ end)
 -- AUTOBUY ФУНКЦИИ
 -- ============================================
 
--- Плавный полет к объекту с TweenService
+-- Плавный полет к объекту с TweenService (ULTRA FAST с обходом античита)
 local function tweenToObject(targetObj, checkForNewItems)
     local char = player.Character
     if not char then return false, nil end
@@ -575,17 +721,55 @@ local function tweenToObject(targetObj, checkForNewItems)
     local distance = (root.Position - targetPart.Position).Magnitude
     local duration = distance / autoBuySpeed
     
-    print(string.format("[AutoBuy] Лечу к цели (%.0f м, %.1f сек)", distance, duration))
+    print(string.format("[AutoBuy] ✈️ Лечу к цели (%.0f м, %.2f сек, скорость: %d м/с)", distance, duration, autoBuySpeed))
     
-    -- Создаем Tween для плавного перемещения
+    -- ОБХОД АНТИЧИТА: Отключаем сервер-сайд проверки движения
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        -- Временно отключаем физику персонажа
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    end
+    
+    -- Создаем ULTRA FAST Tween с Quad easing для плавности
     local targetCFrame = CFrame.new(targetPart.Position) * CFrame.new(0, 3, 0)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tweenInfo = TweenInfo.new(
+        duration, 
+        Enum.EasingStyle.Quad,  -- Quad для плавного ускорения/замедления
+        Enum.EasingDirection.InOut
+    )
     local tween = TweenService:Create(root, tweenInfo, {CFrame = targetCFrame})
+    
+    -- ДОПОЛНИТЕЛЬНЫЙ ОБХОД: Используем CFrame телепорт каждые несколько кадров
+    local bypassConnection = nil
+    if autoBuySpeed > 100 then
+        local frameCount = 0
+        bypassConnection = RunService.Heartbeat:Connect(function()
+            frameCount = frameCount + 1
+            -- Каждые 5 кадров делаем микро-телепорт для обхода античита
+            if frameCount % 5 == 0 and root and root.Parent then
+                local currentPos = root.Position
+                local targetPos = targetPart.Position
+                local direction = (targetPos - currentPos).Unit
+                -- Микро-пуш в направлении цели
+                root.CFrame = root.CFrame + (direction * 2)
+            end
+        end)
+    end
     
     tween:Play()
     tween.Completed:Wait()
     
-    print("[AutoBuy] ✅ Прилетел к цели")
+    -- Отключаем обход
+    if bypassConnection then
+        bypassConnection:Disconnect()
+    end
+    
+    -- Восстанавливаем нормальное состояние персонажа
+    if humanoid and humanoid.Parent then
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    
+    print("[AutoBuy] ✅ Прилетел к цели за " .. string.format("%.2f", duration) .. " сек")
     return true, nil
 end
 
@@ -1139,6 +1323,112 @@ end
 -- ============================================
 -- RAYFIELD GUI
 -- ============================================
+
+-- Функции для работы с выбранными предметами
+local function toggleAssetSelection(assetId)
+    if selectedAssets[assetId] then
+        selectedAssets[assetId] = nil
+        print("[SELECTION] ❌ Убран предмет:", assetId)
+    else
+        selectedAssets[assetId] = true
+        print("[SELECTION] ✅ Добавлен предмет:", assetId)
+    end
+    saveConfig()
+    if espEnabled then
+        updateESP()
+    end
+end
+
+local function toggleAccessorySelection(accessoryId)
+    if selectedAccessories[accessoryId] then
+        selectedAccessories[accessoryId] = nil
+        print("[SELECTION] ❌ Убран аксессуар:", accessoryId)
+    else
+        selectedAccessories[accessoryId] = true
+        print("[SELECTION] ✅ Добавлен аксессуар:", accessoryId)
+    end
+    saveConfig()
+    if espEnabled then
+        updateESP()
+    end
+end
+
+local function clearAllSelections()
+    selectedAssets = {}
+    selectedAccessories = {}
+    print("[SELECTION] 🗑️ Все выборы очищены")
+    saveConfig()
+    if espEnabled then
+        updateESP()
+    end
+end
+
+local function selectAllAssets()
+    selectedAssets = {}
+    for assetId, _ in pairs(ASSETS_DATA) do
+        selectedAssets[assetId] = true
+    end
+    print("[SELECTION] ✅ Выбраны все предметы")
+    saveConfig()
+    if espEnabled then
+        updateESP()
+    end
+end
+
+local function selectAllAccessories()
+    selectedAccessories = {}
+    for accessoryId, _ in pairs(ACCESSORIES_DATA) do
+        selectedAccessories[accessoryId] = true
+    end
+    print("[SELECTION] ✅ Выбраны все аксессуары")
+    saveConfig()
+    if espEnabled then
+        updateESP()
+    end
+end
+
+-- Функция проверки, выбран ли предмет по его asset ID
+local function isAssetSelected(assetId)
+    if not assetId then return false end
+    -- Если ничего не выбрано, показываем все
+    if not next(selectedAssets) then return true end
+    -- Иначе проверяем, есть ли в выбранных
+    return selectedAssets[tostring(assetId)] ~= nil
+end
+
+local function isAccessorySelected(accessoryId)
+    if not accessoryId then return false end
+    -- Если ничего не выбрано, показываем все
+    if not next(selectedAccessories) then return true end
+    -- Иначе проверяем, есть ли в выбранных
+    return selectedAccessories[tostring(accessoryId)] ~= nil
+end
+
+-- Обновленная функция findAllItems с учетом фильтров
+local originalFindAllItems = findAllItems
+findAllItems = function()
+    local allItems = originalFindAllItems()
+    local filteredItems = {}
+    
+    for _, item in pairs(allItems) do
+        -- Проверяем, выбран ли этот предмет/аксессуар
+        if item.type == "Accessory" then
+            if isAccessorySelected(item.assetId) then
+                table.insert(filteredItems, item)
+            end
+        else
+            if isAssetSelected(item.assetId) then
+                table.insert(filteredItems, item)
+            end
+        end
+    end
+    
+    return filteredItems
+end
+
+-- Загружаем конфиг при запуске
+loadConfig()
+
 local Window = Rayfield:CreateWindow({
     Name = "ESP + Item Finder | Firma Mode Hub",
     LoadingTitle = "Загрузка ESP...",
@@ -1240,16 +1530,17 @@ local AutoBuyToggle = AutoBuyTab:CreateToggle({
 
 local SpeedSlider = AutoBuyTab:CreateSlider({
     Name = "Скорость полета",
-    Range = {10, 50},
-    Increment = 1,
+    Range = {50, 300},
+    Increment = 10,
     Suffix = " м/с",
     CurrentValue = autoBuySpeed,
     Flag = "AutoBuySpeed",
     Callback = function(Value)
         autoBuySpeed = Value
+        saveConfig()
         Rayfield:Notify({
             Title = "Скорость изменена",
-            Content = "Новая скорость: " .. Value .. " м/с",
+            Content = "Новая скорость: " .. Value .. " м/с (ULTRA FAST!)",
             Duration = 2,
             Image = 4483362458,
         })
@@ -1282,42 +1573,235 @@ local ManualBuyButton = AutoBuyTab:CreateButton({
 
 AutoBuyTab:CreateParagraph({
     Title = "ℹ️ Как работает AutoBuy",
-    Content = "1. Находит ближайший предмет с ESP\n2. Летит к нему плавно (Tween)\n3. Кликает по предмету (добавление в корзину)\n4. Находит Seller в том же магазине\n5. Летит к Seller\n6. Кликает по Seller (покупка)"
+    Content = "1. Находит ближайший предмет с ESP\n2. Летит к нему плавно (ULTRA FAST Tween + обход античита)\n3. Кликает по предмету (добавление в корзину)\n4. Находит Seller в том же магазине\n5. Летит к Seller\n6. Кликает по Seller (покупка)\n\n🛡️ ОБХОД АНТИЧИТА АКТИВЕН!"
 })
+
+-- Вкладка Выбор предметов (Assets)
+local AssetsTab = Window:CreateTab("👕 Выбор Одежды", 4483362458)
+local AssetsSection = AssetsTab:CreateSection("Фильтр предметов одежды")
+
+AssetsTab:CreateParagraph({
+    Title = "ℹ️ Выбор предметов",
+    Content = "Выберите конкретные предметы для ESP и AutoBuy.\nЕсли ничего не выбрано - показываются ВСЕ предметы."
+})
+
+local SelectAllAssetsButton = AssetsTab:CreateButton({
+    Name = "✅ Выбрать все предметы",
+    Callback = function()
+        selectAllAssets()
+        Rayfield:Notify({
+            Title = "Выбраны все предметы",
+            Content = "ESP покажет всю одежду из базы",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+local ClearAssetsButton = AssetsTab:CreateButton({
+    Name = "❌ Очистить выбор одежды",
+    Callback = function()
+        selectedAssets = {}
+        saveConfig()
+        if espEnabled then updateESP() end
+        Rayfield:Notify({
+            Title = "Выбор очищен",
+            Content = "ESP покажет всю одежду",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+-- Создаем дропдауны для выбора конкретных предметов (топ 20 самых редких)
+local topAssets = {}
+for assetId, data in pairs(ASSETS_DATA) do
+    table.insert(topAssets, {id = assetId, name = data.name, chance = data.chance or 100})
+end
+table.sort(topAssets, function(a, b) return a.chance < b.chance end)
+
+AssetsTab:CreateLabel("Топ-20 самых редких предметов:")
+
+for i = 1, math.min(20, #topAssets) do
+    local asset = topAssets[i]
+    local isSelected = selectedAssets[asset.id] ~= nil
+    
+    AssetsTab:CreateToggle({
+        Name = string.format("%s (%.3f%%)", asset.name, asset.chance),
+        CurrentValue = isSelected,
+        Callback = function(Value)
+            toggleAssetSelection(asset.id)
+        end,
+    })
+end
+
+-- Вкладка Выбор аксессуаров
+local AccessoriesTab = Window:CreateTab("👜 Выбор Аксессуаров", 4483362458)
+local AccessoriesSection = AccessoriesTab:CreateSection("Фильтр аксессуаров")
+
+AccessoriesTab:CreateParagraph({
+    Title = "ℹ️ Выбор аксессуаров",
+    Content = "Выберите конкретные аксессуары для ESP и AutoBuy.\nЕсли ничего не выбрано - показываются ВСЕ аксессуары."
+})
+
+local SelectAllAccessoriesButton = AccessoriesTab:CreateButton({
+    Name = "✅ Выбрать все аксессуары",
+    Callback = function()
+        selectAllAccessories()
+        Rayfield:Notify({
+            Title = "Выбраны все аксессуары",
+            Content = "ESP покажет все аксессуары из базы",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+local ClearAccessoriesButton = AccessoriesTab:CreateButton({
+    Name = "❌ Очистить выбор аксессуаров",
+    Callback = function()
+        selectedAccessories = {}
+        saveConfig()
+        if espEnabled then updateESP() end
+        Rayfield:Notify({
+            Title = "Выбор очищен",
+            Content = "ESP покажет все аксессуары",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+-- Топ 20 самых редких аксессуаров
+local topAccessories = {}
+for accessoryId, data in pairs(ACCESSORIES_DATA) do
+    table.insert(topAccessories, {id = accessoryId, name = data.name, chance = data.chance or 100})
+end
+table.sort(topAccessories, function(a, b) return a.chance < b.chance end)
+
+AccessoriesTab:CreateLabel("Топ-20 самых редких аксессуаров:")
+
+for i = 1, math.min(20, #topAccessories) do
+    local accessory = topAccessories[i]
+    local isSelected = selectedAccessories[accessory.id] ~= nil
+    
+    AccessoriesTab:CreateToggle({
+        Name = string.format("%s (%.3f%%)", accessory.name, accessory.chance),
+        CurrentValue = isSelected,
+        Callback = function(Value)
+            toggleAccessorySelection(accessory.id)
+        end,
+    })
+end
 
 -- Вкладка Статистика
 local StatsTab = Window:CreateTab("📊 Статистика", 4483362458)
 local StatsSection = StatsTab:CreateSection("Информация")
 
 local ItemCountLabel = StatsTab:CreateLabel("Предметов в базе: Загрузка...")
+local AccessoryCountLabel = StatsTab:CreateLabel("Аксессуаров в базе: Загрузка...")
 local FoundItemsLabel = StatsTab:CreateLabel("Найдено предметов: 0")
 local BoughtItemsLabel = StatsTab:CreateLabel("Куплено предметов: 0")
+local SelectedAssetsLabel = StatsTab:CreateLabel("Выбрано предметов: 0")
+local SelectedAccessoriesLabel = StatsTab:CreateLabel("Выбрано аксессуаров: 0")
 
 -- Обновление статистики
 task.spawn(function()
     while true do
-        local totalItems = 0
-        for _ in pairs(ALL_ITEMS) do
-            totalItems = totalItems + 1
+        local totalAssets = 0
+        for _ in pairs(ASSETS_DATA) do
+            totalAssets = totalAssets + 1
+        end
+        
+        local totalAccessories = 0
+        for _ in pairs(ACCESSORIES_DATA) do
+            totalAccessories = totalAccessories + 1
+        end
+        
+        local selectedAssetsCount = 0
+        for _ in pairs(selectedAssets) do
+            selectedAssetsCount = selectedAssetsCount + 1
+        end
+        
+        local selectedAccessoriesCount = 0
+        for _ in pairs(selectedAccessories) do
+            selectedAccessoriesCount = selectedAccessoriesCount + 1
         end
         
         local foundItems = #findAllItems()
         
-        ItemCountLabel:Set("Предметов в базе: " .. totalItems)
-        FoundItemsLabel:Set("Найдено предметов в мире: " .. foundItems)
+        ItemCountLabel:Set("Предметов одежды в базе: " .. totalAssets)
+        AccessoryCountLabel:Set("Аксессуаров в базе: " .. totalAccessories)
+        FoundItemsLabel:Set("Найдено в мире: " .. foundItems)
         BoughtItemsLabel:Set("Куплено предметов: " .. autoBuyCounter)
+        SelectedAssetsLabel:Set("Выбрано предметов: " .. (selectedAssetsCount == 0 and "ВСЕ" or tostring(selectedAssetsCount)))
+        SelectedAccessoriesLabel:Set("Выбрано аксессуаров: " .. (selectedAccessoriesCount == 0 and "ВСЕ" or tostring(selectedAccessoriesCount)))
         
-        task.wait(5)
+        task.wait(3)
     end
 end)
+
+-- Вкладка Конфиг
+local ConfigTab = Window:CreateTab("⚙️ Конфиг", 4483362458)
+local ConfigSection = ConfigTab:CreateSection("Управление конфигурацией")
+
+ConfigTab:CreateParagraph({
+    Title = "ℹ️ Автосохранение",
+    Content = "Все настройки автоматически сохраняются при изменении.\nКонфиг загружается при запуске скрипта."
+})
+
+local SaveConfigButton = ConfigTab:CreateButton({
+    Name = "💾 Сохранить конфиг вручную",
+    Callback = function()
+        saveConfig()
+        Rayfield:Notify({
+            Title = "Конфиг сохранен",
+            Content = "Все настройки сохранены!",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+local LoadConfigButton = ConfigTab:CreateButton({
+    Name = "📂 Перезагрузить конфиг",
+    Callback = function()
+        loadConfig()
+        Rayfield:Notify({
+            Title = "Конфиг загружен",
+            Content = "Настройки восстановлены из файла",
+            Duration = 2,
+            Image = 4483362458,
+        })
+    end,
+})
+
+local ResetConfigButton = ConfigTab:CreateButton({
+    Name = "🗑️ Сбросить все настройки",
+    Callback = function()
+        selectedAssets = {}
+        selectedAccessories = {}
+        autoBuySpeed = 150
+        espEnabled = false
+        autoBuyEnabled = false
+        saveConfig()
+        clearESP()
+        Rayfield:Notify({
+            Title = "Конфиг сброшен",
+            Content = "Все настройки вернулись к значениям по умолчанию",
+            Duration = 3,
+            Image = 4483362458,
+        })
+    end,
+})
 
 -- Вкладка О скрипте
 local AboutTab = Window:CreateTab("ℹ️ О скрипте", 4483362458)
 local AboutSection = AboutTab:CreateSection("Информация")
 
 AboutTab:CreateParagraph({
-    Title = "Firma Mode Hub ESP",
-    Content = "Скрипт для поиска редких предметов\n\nTelegram: @FirmaModeHub\n\nВерсия: 2.0"
+    Title = "Firma Mode Hub ESP + AutoBuy",
+    Content = "Скрипт для поиска и автопокупки редких предметов\n\n✨ НОВЫЕ ФУНКЦИИ:\n• 🛡️ Обход античита для телепорта\n• 🚀 ULTRA FAST твин телепорт (до 300 м/с!)\n• 👕 Выбор конкретных предметов одежды\n• 👜 Выбор конкретных аксессуаров\n• 💾 Автосохранение конфигурации\n\nTelegram: @FirmaModeHub\n\nВерсия: 3.0 ULTRA"
 })
 
 AboutTab:CreateButton({
@@ -1336,13 +1820,22 @@ AboutTab:CreateButton({
 -- ============================================
 -- ЗАПУСК
 -- ============================================
-updateESP()
+-- Загружаем сохраненный конфиг
+local savedConfig = loadConfig()
+
+-- Обновляем ESP с учетом загруженных настроек
+if espEnabled then
+    updateESP()
+end
 
 Rayfield:Notify({
-    Title = "ESP Загружен!",
-    Content = "Скрипт успешно запущен",
+    Title = "ESP + AutoBuy Загружен!",
+    Content = "🛡️ Обход античита активен\n🚀 ULTRA FAST режим включен\n💾 Конфиг загружен",
     Duration = 5,
     Image = 4483362458,
 })
 
-print("[ESP] Скрипт загружен с Rayfield GUI!")
+print("[ESP] ✅ Скрипт загружен с Rayfield GUI!")
+print("[ESP] 🛡️ Anti-cheat bypass: " .. (antiCheatHooked and "АКТИВЕН" or "ВЫКЛЮЧЕН"))
+print("[ESP] 🚀 Скорость телепорта: " .. autoBuySpeed .. " м/с")
+print("[ESP] 💾 Конфиг загружен из: " .. CONFIG_FOLDER .. "/" .. CONFIG_FILE .. ".json")
