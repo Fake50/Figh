@@ -761,7 +761,7 @@ end)
 -- AUTOBUY ФУНКЦИИ
 -- ============================================
 
--- Плавный полет к объекту с ADVANCED BYPASS (имитация флая)
+-- Плавный полет к объекту (ПРОСТОЙ И НАДЁЖНЫЙ МЕТОД)
 local function tweenToObject(targetObj, checkForNewItems)
     local char = player.Character
     if not char then return false, nil end
@@ -789,105 +789,31 @@ local function tweenToObject(targetObj, checkForNewItems)
     
     print(string.format("[AutoBuy] ✈️ Лечу к цели (%.0f м, %.2f сек, %d м/с)", distance, duration, autoBuySpeed))
     
-    -- ========================================
-    -- ADVANCED BYPASS: Имитация флая
-    -- ========================================
+    -- Простой метод: Прямой CFrame телепорт небольшими шагами
+    local steps = math.ceil(duration * 30) -- 30 шагов в секунду
+    local stepDelay = duration / steps
     
-    -- 1. Делаем персонажа "невесомым"
-    local originalGravity = workspace.Gravity
-    local bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    bodyVelocity.Parent = root
-    
-    -- 2. Убираем коллизию со стенами
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = false
-        end
-    end
-    
-    -- 3. Переводим в режим Physics (отключаем анимации)
-    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    
-    -- 4. Создаем плавный полет через Heartbeat (как флай)
-    local startTime = tick()
-    local flyConnection = nil
-    local completed = false
-    
-    flyConnection = RunService.Heartbeat:Connect(function()
+    for i = 1, steps do
         if not root or not root.Parent or not char.Parent then
-            completed = true
-            return
+            break
         end
         
-        local elapsed = tick() - startTime
-        local alpha = math.min(elapsed / duration, 1)
+        local alpha = i / steps
+        local currentPos = startPos:Lerp(targetPos, alpha)
         
-        -- Ease-функция для плавности (InOutQuad)
-        local easeAlpha = alpha < 0.5 
-            and 2 * alpha * alpha 
-            or 1 - math.pow(-2 * alpha + 2, 2) / 2
-        
-        -- Вычисляем текущую позицию
-        local currentPos = startPos:Lerp(targetPos, easeAlpha)
-        
-        -- ОБХОД АНТИЧИТА: Двигаемся через BodyVelocity + CFrame
-        local direction = (targetPos - root.Position).Unit
-        local speed = autoBuySpeed
-        
-        -- Velocity для обхода физики
-        bodyVelocity.Velocity = direction * speed
-        
-        -- CFrame для точного позиционирования
+        -- Телепортируем
         root.CFrame = CFrame.new(currentPos)
         
-        -- Убираем вертикальную скорость (чтобы не падать)
-        if root.AssemblyLinearVelocity.Y < 0 then
-            local vel = root.AssemblyLinearVelocity
-            root.AssemblyLinearVelocity = Vector3.new(vel.X, 0, vel.Z)
-        end
-        
-        -- Проверка завершения
-        if alpha >= 1 or (root.Position - targetPos).Magnitude < 5 then
-            completed = true
-        end
-    end)
-    
-    -- Ждем завершения полета
-    while not completed do
-        task.wait()
+        -- Небольшая задержка
+        task.wait(stepDelay)
     end
     
-    -- Отключаем bypass
-    if flyConnection then
-        flyConnection:Disconnect()
+    -- Финальная позиция
+    if root and root.Parent then
+        root.CFrame = CFrame.new(targetPos)
     end
     
-    -- 5. Восстанавливаем всё
-    if bodyVelocity and bodyVelocity.Parent then
-        bodyVelocity:Destroy()
-    end
-    
-    -- Возвращаем коллизию
-    for _, part in pairs(char:GetDescendants()) do
-        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-            part.CanCollide = true
-        end
-    end
-    
-    -- Восстанавливаем гуманоида
-    if humanoid and humanoid.Parent then
-        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        humanoid:MoveTo(root.Position) -- Финальная позиция
-    end
-    
-    -- Финальная установка позиции
-    root.CFrame = CFrame.new(targetPos)
-    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-    root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-    
-    print("[AutoBuy] ✅ Прилетел к цели (обход античита успешен)")
+    print("[AutoBuy] ✅ Прилетел к цели")
     return true, nil
 end
 
