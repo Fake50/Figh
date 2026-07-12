@@ -761,7 +761,7 @@ end)
 -- AUTOBUY ФУНКЦИИ
 -- ============================================
 
--- ИДЕАЛЬНЫЙ ОБХОД АНТИЧИТА - Комбо Humanoid:MoveTo + CFrame
+-- АГРЕССИВНЫЙ ОБХОД - Принудительная фиксация позиции
 local function tweenToObject(targetObj, checkForNewItems)
     local char = player.Character
     if not char then return false, nil end
@@ -795,70 +795,85 @@ local function tweenToObject(targetObj, checkForNewItems)
     local duration = distance / safeSpeed
     print(string.format("[AutoBuy] ✈️ Лечу к цели (%.0f м, %.2f сек, %d м/с)", distance, duration, safeSpeed))
     
-    -- ИДЕАЛЬНЫЙ ОБХОД: Используем Humanoid:MoveTo() для обхода античита
-    -- Это легальный метод движения, который не детектится
+    -- Используем Humanoid:MoveTo для легальности
     humanoid:MoveTo(targetPos)
     
-    -- Параллельно делаем CFrame телепорт маленькими шагами
-    local steps = math.max(math.ceil(duration * 15), 10) -- 15 шагов/сек
+    local steps = math.max(math.ceil(duration * 15), 10)
     local stepDelay = duration / steps
-    local movingConnection = nil
-    local hasReached = false
+    local currentStep = 0
+    local targetReached = false
     
-    -- Слушаем событие MoveToFinished (если дошёл пешком)
-    movingConnection = humanoid.MoveToFinished:Connect(function(reached)
-        hasReached = true
+    -- АГРЕССИВНЫЙ ОБХОД: Heartbeat loop с принудительной фиксацией
+    local heartbeatConnection = nil
+    local currentTargetPos = startPos
+    
+    heartbeatConnection = RunService.Heartbeat:Connect(function()
+        if not root or not root.Parent or not char.Parent or targetReached then
+            if heartbeatConnection then
+                heartbeatConnection:Disconnect()
+            end
+            return
+        end
+        
+        -- ПРИНУДИТЕЛЬНО фиксируем позицию каждый кадр
+        root.CFrame = CFrame.new(currentTargetPos)
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        
+        -- Якорим персонажа (отключаем физику на один кадр)
+        root.Anchored = true
+        task.wait()
+        root.Anchored = false
     end)
     
-    -- CFrame телепорт маленькими шагами (обход античита)
+    -- Основной цикл телепортации
     for i = 1, steps do
         if not root or not root.Parent or not char.Parent then
             break
         end
         
-        if hasReached then
-            break -- Уже дошёл
-        end
-        
         local alpha = i / steps
-        
-        -- Плавная ease-функция
         local easeAlpha = -(math.cos(math.pi * alpha) - 1) / 2
         
-        local currentPos = startPos:Lerp(targetPos, easeAlpha)
+        currentTargetPos = startPos:Lerp(targetPos, easeAlpha)
+        currentStep = i
         
-        -- ОБХОД АНТИЧИТА: CFrame + Humanoid:MoveTo комбо
-        -- MoveTo говорит серверу "я иду сюда"
-        -- CFrame реально телепортирует туда
-        root.CFrame = CFrame.new(currentPos)
-        humanoid:MoveTo(targetPos) -- Обновляем MoveTo каждый шаг
-        
-        -- Обнуляем velocity чтобы не откатывало
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        -- Обновляем MoveTo
+        humanoid:MoveTo(targetPos)
         
         task.wait(stepDelay)
     end
     
-    -- Отключаем слушатель
-    if movingConnection then
-        movingConnection:Disconnect()
+    -- Финальная позиция
+    currentTargetPos = targetPos
+    targetReached = true
+    
+    -- Ждём пока Heartbeat зафиксирует финальную позицию
+    task.wait(0.1)
+    
+    -- Отключаем Heartbeat
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
     end
     
-    -- ФИНАЛЬНАЯ ТЕЛЕПОРТАЦИЯ: Принудительно ставим на место
+    -- Финальная фиксация
     if root and root.Parent then
-        root.CFrame = CFrame.new(targetPos)
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        for i = 1, 3 do -- 3 раза для надёжности
+            root.CFrame = CFrame.new(targetPos)
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            root.Anchored = true
+            task.wait(0.05)
+            root.Anchored = false
+            task.wait(0.05)
+        end
         
-        -- Останавливаем движение гуманоида
         humanoid:Move(Vector3.new(0, 0, 0))
     end
     
-    -- Небольшая пауза для стабилизации
-    task.wait(0.15)
+    task.wait(0.2)
     
-    print("[AutoBuy] ✅ Прилетел к цели (обход активен)")
+    print("[AutoBuy] ✅ Прилетел к цели (агрессивная фиксация)")
     return true, nil
 end
 
