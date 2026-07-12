@@ -244,12 +244,22 @@ for id, data in pairs(ACCESSORIES_DATA) do
 end
 
 -- ============================================
+-- ВЫБОР ПРЕДМЕТОВ И АКСЕССУАРОВ (ИНИЦИАЛИЗАЦИЯ ДО ФУНКЦИЙ!)
+-- ============================================
+local selectedAssets = {}  -- Выбранные предметы (из ASSETS_DATA)
+local selectedAccessories = {}  -- Выбранные аксессуары (из ACCESSORIES_DATA)
+
+-- ============================================
 -- ФУНКЦИИ ПРОВЕРКИ ВЫБОРА (ДО findAllItems!)
 -- ============================================
 
 -- Функция проверки, выбран ли предмет по его asset ID
 local function isAssetSelected(assetId)
     if not assetId then return false end
+    -- Проверяем что таблица существует
+    if not selectedAssets or type(selectedAssets) ~= "table" then 
+        return true 
+    end
     -- Если ничего не выбрано, показываем все
     local hasSelection = false
     for _ in pairs(selectedAssets) do
@@ -263,6 +273,10 @@ end
 
 local function isAccessorySelected(accessoryId)
     if not accessoryId then return false end
+    -- Проверяем что таблица существует
+    if not selectedAccessories or type(selectedAccessories) ~= "table" then 
+        return true 
+    end
     -- Если ничего не выбрано, показываем все
     local hasSelection = false
     for _ in pairs(selectedAccessories) do
@@ -295,12 +309,6 @@ local FILTER = {
     minResellMulti = 2,
     excludedQualities = {"Poor", "Worn"},
 }
-
--- ============================================
--- ВЫБОР ПРЕДМЕТОВ И АКСЕССУАРОВ
--- ============================================
-local selectedAssets = {}  -- Выбранные предметы (из ASSETS_DATA)
-local selectedAccessories = {}  -- Выбранные аксессуары (из ACCESSORIES_DATA)
 
 -- ============================================
 -- КОНФИГУРАЦИЯ И СОХРАНЕНИЕ
