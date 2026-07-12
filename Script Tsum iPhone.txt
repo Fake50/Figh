@@ -516,49 +516,60 @@ local function findAllItems()
             if assetId then
                 local itemData = findItemById(assetId)
                 if itemData then
-                    -- Определяем целевой объект
-                    local target = obj
+                    -- ФИЛЬТРАЦИЯ: Проверяем, выбран ли этот предмет
+                    local shouldInclude = false
                     
-                    if obj:IsA("Accessory") then
-                        -- Для аксессуаров проверяем, есть ли родительская Model
-                        if obj.Parent:IsA("Model") and obj.Parent ~= workspace then
-                            target = obj.Parent
-                        else
-                            target = obj  -- Сам аксессуар как цель
-                        end
-                    elseif obj:IsA("MeshPart") then
-                        -- Для MeshPart (Handle, Body, L, R) используем родительскую Model M_*
-                        if obj.Parent and obj.Parent:IsA("Model") then
-                            target = obj.Parent
-                        else
-                            target = obj
-                        end
+                    if itemType == "Accessory" then
+                        shouldInclude = isAccessorySelected(assetId)
                     else
-                        -- Для одежды поднимаемся до Model
-                        target = obj.Parent
-                        while target and not target:IsA("Model") do
-                            target = target.Parent
-                            if target == workspace or target == game then
-                                target = nil
-                                break
-                            end
-                        end
+                        shouldInclude = isAssetSelected(assetId)
                     end
                     
-                    -- Проверяем, что это не игрок и не дубликат
-                    if target and not isPlayerModel(target) and not processedModels[target] then
-                        processedModels[target] = true
+                    if shouldInclude then
+                        -- Определяем целевой объект
+                        local target = obj
                         
-                        table.insert(results, {
-                            object = target,
-                            name = itemData.name,
-                            price = 0,
-                            resellMulti = 0,
-                            rarity = itemData.rarity,
-                            type = itemType,
-                            quality = "",
-                            assetId = assetId,
-                        })
+                        if obj:IsA("Accessory") then
+                            -- Для аксессуаров проверяем, есть ли родительская Model
+                            if obj.Parent:IsA("Model") and obj.Parent ~= workspace then
+                                target = obj.Parent
+                            else
+                                target = obj  -- Сам аксессуар как цель
+                            end
+                        elseif obj:IsA("MeshPart") then
+                            -- Для MeshPart (Handle, Body, L, R) используем родительскую Model M_*
+                            if obj.Parent and obj.Parent:IsA("Model") then
+                                target = obj.Parent
+                            else
+                                target = obj
+                            end
+                        else
+                            -- Для одежды поднимаемся до Model
+                            target = obj.Parent
+                            while target and not target:IsA("Model") do
+                                target = target.Parent
+                                if target == workspace or target == game then
+                                    target = nil
+                                    break
+                                end
+                            end
+                        end
+                        
+                        -- Проверяем, что это не игрок и не дубликат
+                        if target and not isPlayerModel(target) and not processedModels[target] then
+                            processedModels[target] = true
+                            
+                            table.insert(results, {
+                                object = target,
+                                name = itemData.name,
+                                price = 0,
+                                resellMulti = 0,
+                                rarity = itemData.rarity,
+                                type = itemType,
+                                quality = "",
+                                assetId = assetId,
+                            })
+                        end
                     end
                 end
             end
@@ -700,7 +711,7 @@ end)
 -- AUTOBUY ФУНКЦИИ
 -- ============================================
 
--- Плавный полет к объекту с TweenService (ULTRA FAST с обходом античита)
+-- Плавный полет к объекту с ADVANCED BYPASS (имитация флая)
 local function tweenToObject(targetObj, checkForNewItems)
     local char = player.Character
     if not char then return false, nil end
@@ -717,59 +728,116 @@ local function tweenToObject(targetObj, checkForNewItems)
         return false, nil
     end
     
-    -- Вычисляем расстояние и время полета
-    local distance = (root.Position - targetPart.Position).Magnitude
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false, nil end
+    
+    -- Вычисляем расстояние и параметры
+    local startPos = root.Position
+    local targetPos = targetPart.Position + Vector3.new(0, 3, 0)
+    local distance = (startPos - targetPos).Magnitude
     local duration = distance / autoBuySpeed
     
-    print(string.format("[AutoBuy] ✈️ Лечу к цели (%.0f м, %.2f сек, скорость: %d м/с)", distance, duration, autoBuySpeed))
+    print(string.format("[AutoBuy] ✈️ Лечу к цели (%.0f м, %.2f сек, %d м/с)", distance, duration, autoBuySpeed))
     
-    -- ОБХОД АНТИЧИТА: Отключаем сервер-сайд проверки движения
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        -- Временно отключаем физику персонажа
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    -- ========================================
+    -- ADVANCED BYPASS: Имитация флая
+    -- ========================================
+    
+    -- 1. Делаем персонажа "невесомым"
+    local originalGravity = workspace.Gravity
+    local bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.Parent = root
+    
+    -- 2. Убираем коллизию со стенами
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = false
+        end
     end
     
-    -- Создаем ULTRA FAST Tween с Quad easing для плавности
-    local targetCFrame = CFrame.new(targetPart.Position) * CFrame.new(0, 3, 0)
-    local tweenInfo = TweenInfo.new(
-        duration, 
-        Enum.EasingStyle.Quad,  -- Quad для плавного ускорения/замедления
-        Enum.EasingDirection.InOut
-    )
-    local tween = TweenService:Create(root, tweenInfo, {CFrame = targetCFrame})
+    -- 3. Переводим в режим Physics (отключаем анимации)
+    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
     
-    -- ДОПОЛНИТЕЛЬНЫЙ ОБХОД: Используем CFrame телепорт каждые несколько кадров
-    local bypassConnection = nil
-    if autoBuySpeed > 100 then
-        local frameCount = 0
-        bypassConnection = RunService.Heartbeat:Connect(function()
-            frameCount = frameCount + 1
-            -- Каждые 5 кадров делаем микро-телепорт для обхода античита
-            if frameCount % 5 == 0 and root and root.Parent then
-                local currentPos = root.Position
-                local targetPos = targetPart.Position
-                local direction = (targetPos - currentPos).Unit
-                -- Микро-пуш в направлении цели
-                root.CFrame = root.CFrame + (direction * 2)
-            end
-        end)
+    -- 4. Создаем плавный полет через Heartbeat (как флай)
+    local startTime = tick()
+    local flyConnection = nil
+    local completed = false
+    
+    flyConnection = RunService.Heartbeat:Connect(function()
+        if not root or not root.Parent or not char.Parent then
+            completed = true
+            return
+        end
+        
+        local elapsed = tick() - startTime
+        local alpha = math.min(elapsed / duration, 1)
+        
+        -- Ease-функция для плавности (InOutQuad)
+        local easeAlpha = alpha < 0.5 
+            and 2 * alpha * alpha 
+            or 1 - math.pow(-2 * alpha + 2, 2) / 2
+        
+        -- Вычисляем текущую позицию
+        local currentPos = startPos:Lerp(targetPos, easeAlpha)
+        
+        -- ОБХОД АНТИЧИТА: Двигаемся через BodyVelocity + CFrame
+        local direction = (targetPos - root.Position).Unit
+        local speed = autoBuySpeed
+        
+        -- Velocity для обхода физики
+        bodyVelocity.Velocity = direction * speed
+        
+        -- CFrame для точного позиционирования
+        root.CFrame = CFrame.new(currentPos)
+        
+        -- Убираем вертикальную скорость (чтобы не падать)
+        if root.AssemblyLinearVelocity.Y < 0 then
+            local vel = root.AssemblyLinearVelocity
+            root.AssemblyLinearVelocity = Vector3.new(vel.X, 0, vel.Z)
+        end
+        
+        -- Проверка завершения
+        if alpha >= 1 or (root.Position - targetPos).Magnitude < 5 then
+            completed = true
+        end
+    end)
+    
+    -- Ждем завершения полета
+    while not completed do
+        task.wait()
     end
     
-    tween:Play()
-    tween.Completed:Wait()
-    
-    -- Отключаем обход
-    if bypassConnection then
-        bypassConnection:Disconnect()
+    -- Отключаем bypass
+    if flyConnection then
+        flyConnection:Disconnect()
     end
     
-    -- Восстанавливаем нормальное состояние персонажа
+    -- 5. Восстанавливаем всё
+    if bodyVelocity and bodyVelocity.Parent then
+        bodyVelocity:Destroy()
+    end
+    
+    -- Возвращаем коллизию
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.CanCollide = true
+        end
+    end
+    
+    -- Восстанавливаем гуманоида
     if humanoid and humanoid.Parent then
         humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        humanoid:MoveTo(root.Position) -- Финальная позиция
     end
     
-    print("[AutoBuy] ✅ Прилетел к цели за " .. string.format("%.2f", duration) .. " сек")
+    -- Финальная установка позиции
+    root.CFrame = CFrame.new(targetPos)
+    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+    
+    print("[AutoBuy] ✅ Прилетел к цели (обход античита успешен)")
     return true, nil
 end
 
@@ -1325,34 +1393,6 @@ end
 -- ============================================
 
 -- Функции для работы с выбранными предметами
-local function toggleAssetSelection(assetId)
-    if selectedAssets[assetId] then
-        selectedAssets[assetId] = nil
-        print("[SELECTION] ❌ Убран предмет:", assetId)
-    else
-        selectedAssets[assetId] = true
-        print("[SELECTION] ✅ Добавлен предмет:", assetId)
-    end
-    saveConfig()
-    if espEnabled then
-        updateESP()
-    end
-end
-
-local function toggleAccessorySelection(accessoryId)
-    if selectedAccessories[accessoryId] then
-        selectedAccessories[accessoryId] = nil
-        print("[SELECTION] ❌ Убран аксессуар:", accessoryId)
-    else
-        selectedAccessories[accessoryId] = true
-        print("[SELECTION] ✅ Добавлен аксессуар:", accessoryId)
-    end
-    saveConfig()
-    if espEnabled then
-        updateESP()
-    end
-end
-
 local function clearAllSelections()
     selectedAssets = {}
     selectedAccessories = {}
@@ -1404,28 +1444,6 @@ local function isAccessorySelected(accessoryId)
     return selectedAccessories[tostring(accessoryId)] ~= nil
 end
 
--- Обновленная функция findAllItems с учетом фильтров
-local originalFindAllItems = findAllItems
-findAllItems = function()
-    local allItems = originalFindAllItems()
-    local filteredItems = {}
-    
-    for _, item in pairs(allItems) do
-        -- Проверяем, выбран ли этот предмет/аксессуар
-        if item.type == "Accessory" then
-            if isAccessorySelected(item.assetId) then
-                table.insert(filteredItems, item)
-            end
-        else
-            if isAssetSelected(item.assetId) then
-                table.insert(filteredItems, item)
-            end
-        end
-    end
-    
-    return filteredItems
-end
-
 -- Загружаем конфиг при запуске
 loadConfig()
 
@@ -1434,7 +1452,7 @@ local Window = Rayfield:CreateWindow({
     LoadingTitle = "Загрузка ESP...",
     LoadingSubtitle = "by @FirmaModeHub",
     ConfigurationSaving = {
-        Enabled = true,
+        Enabled = false,  -- Отключаем встроенное сохранение, используем свое
         FolderName = "FirmaESP",
         FileName = "Config"
     },
@@ -1450,24 +1468,147 @@ local Window = Rayfield:CreateWindow({
 local ESPTab = Window:CreateTab("🔍 ESP", 4483362458)
 local ESPSection = ESPTab:CreateSection("Настройки ESP")
 
+ESPTab:CreateParagraph({
+    Title = "ℹ️ Режимы ESP",
+    Content = "Выберите, что показывать на ESP:\n• Все вещи - вся одежда из базы\n• Выбранные вещи - только выбранные на вкладке 👕\n• Все аксессуары - все аксессуары из базы\n• Выбранные аксессуары - только выбранные на вкладке 👜"
+})
+
 local ESPToggle = ESPTab:CreateToggle({
-    Name = "Включить ESP",
-    CurrentValue = espEnabled,
-    Flag = "ESPEnabled",
+    Name = "🔍 ESP: Все вещи (одежда)",
+    CurrentValue = espEnabled and not next(selectedAssets),
+    Flag = "ESPAllAssets",
     Callback = function(Value)
-        espEnabled = Value
-        clearESP()
-        if espEnabled then 
+        if Value then
+            -- Очищаем выбор одежды, чтобы показать ВСЁ
+            selectedAssets = {}
+            espEnabled = true
+            saveConfig()
             updateESP()
             Rayfield:Notify({
-                Title = "ESP Включен",
-                Content = "Поиск предметов из списка...",
+                Title = "ESP: Все вещи",
+                Content = "Показывается вся одежда из базы",
                 Duration = 3,
                 Image = 4483362458,
             })
         else
+            espEnabled = false
+            clearESP()
+        end
+    end,
+})
+
+local ESPSelectedAssetsToggle = ESPTab:CreateToggle({
+    Name = "👕 ESP: Выбранные вещи",
+    CurrentValue = espEnabled and next(selectedAssets) ~= nil,
+    Flag = "ESPSelectedAssets",
+    Callback = function(Value)
+        if Value then
+            -- Включаем ESP только для выбранных
+            if not next(selectedAssets) then
+                Rayfield:Notify({
+                    Title = "Ошибка",
+                    Content = "Сначала выберите вещи на вкладке 👕",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+                return
+            end
+            espEnabled = true
+            saveConfig()
+            updateESP()
             Rayfield:Notify({
-                Title = "ESP Выключен",
+                Title = "ESP: Выбранные вещи",
+                Content = "Показываются только выбранные предметы одежды",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        else
+            espEnabled = false
+            clearESP()
+        end
+    end,
+})
+
+local ESPAllAccessoriesToggle = ESPTab:CreateToggle({
+    Name = "🔍 ESP: Все аксессуары",
+    CurrentValue = espEnabled and not next(selectedAccessories),
+    Flag = "ESPAllAccessories",
+    Callback = function(Value)
+        if Value then
+            -- Очищаем выбор аксессуаров, чтобы показать ВСЁ
+            selectedAccessories = {}
+            espEnabled = true
+            saveConfig()
+            updateESP()
+            Rayfield:Notify({
+                Title = "ESP: Все аксессуары",
+                Content = "Показываются все аксессуары из базы",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        else
+            espEnabled = false
+            clearESP()
+        end
+    end,
+})
+
+local ESPSelectedAccessoriesToggle = ESPTab:CreateToggle({
+    Name = "👜 ESP: Выбранные аксессуары",
+    CurrentValue = espEnabled and next(selectedAccessories) ~= nil,
+    Flag = "ESPSelectedAccessories",
+    Callback = function(Value)
+        if Value then
+            -- Включаем ESP только для выбранных аксессуаров
+            if not next(selectedAccessories) then
+                Rayfield:Notify({
+                    Title = "Ошибка",
+                    Content = "Сначала выберите аксессуары на вкладке 👜",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+                return
+            end
+            espEnabled = true
+            saveConfig()
+            updateESP()
+            Rayfield:Notify({
+                Title = "ESP: Выбранные аксессуары",
+                Content = "Показываются только выбранные аксессуары",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        else
+            espEnabled = false
+            clearESP()
+        end
+    end,
+})
+
+ESPTab:CreateLabel("──────────────────────────")
+
+local ESPAllToggle = ESPTab:CreateToggle({
+    Name = "✨ ESP: ВСЁ (одежда + аксессуары)",
+    CurrentValue = espEnabled,
+    Flag = "ESPAll",
+    Callback = function(Value)
+        espEnabled = Value
+        if espEnabled then
+            -- Очищаем все фильтры
+            selectedAssets = {}
+            selectedAccessories = {}
+            saveConfig()
+            updateESP()
+            Rayfield:Notify({
+                Title = "ESP включен",
+                Content = "Показываются ВСЕ предметы (одежда + аксессуары)",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        else
+            clearESP()
+            Rayfield:Notify({
+                Title = "ESP выключен",
                 Content = "Все маркеры удалены",
                 Duration = 3,
                 Image = 4483362458,
@@ -1624,13 +1765,23 @@ AssetsTab:CreateLabel("Топ-20 самых редких предметов:")
 
 for i = 1, math.min(20, #topAssets) do
     local asset = topAssets[i]
-    local isSelected = selectedAssets[asset.id] ~= nil
     
     AssetsTab:CreateToggle({
         Name = string.format("%s (%.3f%%)", asset.name, asset.chance),
-        CurrentValue = isSelected,
+        CurrentValue = selectedAssets[asset.id] ~= nil,
+        Flag = "Asset_" .. asset.id,
         Callback = function(Value)
-            toggleAssetSelection(asset.id)
+            if Value then
+                selectedAssets[asset.id] = true
+                print("[SELECTION] ✅ Добавлен предмет:", asset.name)
+            else
+                selectedAssets[asset.id] = nil
+                print("[SELECTION] ❌ Убран предмет:", asset.name)
+            end
+            saveConfig()
+            if espEnabled then
+                updateESP()
+            end
         end,
     })
 end
@@ -1683,13 +1834,23 @@ AccessoriesTab:CreateLabel("Топ-20 самых редких аксессуар
 
 for i = 1, math.min(20, #topAccessories) do
     local accessory = topAccessories[i]
-    local isSelected = selectedAccessories[accessory.id] ~= nil
     
     AccessoriesTab:CreateToggle({
         Name = string.format("%s (%.3f%%)", accessory.name, accessory.chance),
-        CurrentValue = isSelected,
+        CurrentValue = selectedAccessories[accessory.id] ~= nil,
+        Flag = "Accessory_" .. accessory.id,
         Callback = function(Value)
-            toggleAccessorySelection(accessory.id)
+            if Value then
+                selectedAccessories[accessory.id] = true
+                print("[SELECTION] ✅ Добавлен аксессуар:", accessory.name)
+            else
+                selectedAccessories[accessory.id] = nil
+                print("[SELECTION] ❌ Убран аксессуар:", accessory.name)
+            end
+            saveConfig()
+            if espEnabled then
+                updateESP()
+            end
         end,
     })
 end
