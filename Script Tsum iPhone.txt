@@ -5,7 +5,7 @@
 -- ============================================
 
 -- Загружаем WindUI Library
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Wind-Scripter/WindUI/main/source.lua"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
 
 print("[WindUI] Библиотека загружена")
 
@@ -1481,43 +1481,34 @@ local Window = WindUI:CreateWindow({
 -- ВКЛАДКА ESP
 -- ============================================
 local ESPTab = Window:Tab({
-    Name = "🔍 ESP",
-    Icon = "rbxassetid://4483362458",
+    Title = "🔍 ESP",
+    Icon = "eye",
     Color = Color3.fromRGB(0, 150, 255)
 })
 
-local ESPSection = ESPTab:Section({
-    Name = "Настройки ESP"
+ESPTab:Label({
+    Title = "ℹ️ Выберите режим отображения предметов:"
 })
 
 ESPTab:Label({
-    Text = "ℹ️ Выберите режим отображения предметов:",
-    Flag = false
+    Title = "• Все вещи - вся одежда из базы"
 })
 
 ESPTab:Label({
-    Text = "• Все вещи - вся одежда из базы",
-    Flag = false
+    Title = "• Выбранные вещи - только выбранные на вкладке 👕"
 })
 
 ESPTab:Label({
-    Text = "• Выбранные вещи - только выбранные на вкладке 👕",
-    Flag = false
+    Title = "• Все аксессуары - все аксессуары из базы"
 })
 
 ESPTab:Label({
-    Text = "• Все аксессуары - все аксессуары из базы",
-    Flag = false
-})
-
-ESPTab:Label({
-    Text = "• Выбранные аксессуары - только из вкладки 👜",
-    Flag = false
+    Title = "• Выбранные аксессуары - только из вкладки 👜"
 })
 
 local ESPToggle = ESPTab:Toggle({
-    Name = "🔍 ESP: Все вещи (одежда)",
-    Value = false,
+    Title = "🔍 ESP: Все вещи (одежда)",
+    Default = false,
     Callback = function(Value)
         pcall(function()
             if Value then
@@ -1539,8 +1530,8 @@ local ESPToggle = ESPTab:Toggle({
 })
 
 local ESPSelectedAssetsToggle = ESPTab:Toggle({
-    Name = "👕 ESP: Выбранные вещи",
-    Value = false,
+    Title = "👕 ESP: Выбранные вещи",
+    Default = false,
     Callback = function(Value)
         pcall(function()
             if Value then
@@ -1574,8 +1565,8 @@ local ESPSelectedAssetsToggle = ESPTab:Toggle({
 })
 
 local ESPAllAccessoriesToggle = ESPTab:Toggle({
-    Name = "🔍 ESP: Все аксессуары",
-    Value = false,
+    Title = "🔍 ESP: Все аксессуары",
+    Default = false,
     Callback = function(Value)
         pcall(function()
             if Value then
@@ -1597,8 +1588,8 @@ local ESPAllAccessoriesToggle = ESPTab:Toggle({
 })
 
 local ESPSelectedAccessoriesToggle = ESPTab:Toggle({
-    Name = "👜 ESP: Выбранные аксессуары",
-    Value = false,
+    Title = "👜 ESP: Выбранные аксессуары",
+    Default = false,
     Callback = function(Value)
         pcall(function()
             if Value then
@@ -1634,8 +1625,8 @@ local ESPSelectedAccessoriesToggle = ESPTab:Toggle({
 ESPTab:Divider()
 
 local ESPAllToggle = ESPTab:Toggle({
-    Name = "✨ ESP: ВСЁ (одежда + аксессуары)",
-    Value = false,
+    Title = "✨ ESP: ВСЁ (одежда + аксессуары)",
+    Default = false,
     Callback = function(Value)
         pcall(function()
             espEnabled = Value
@@ -1662,7 +1653,7 @@ local ESPAllToggle = ESPTab:Toggle({
 })
 
 local RefreshButton = ESPTab:Button({
-    Name = "🔄 Обновить ESP",
+    Title = "🔄 Обновить ESP",
     Callback = function()
         pcall(function()
             if espEnabled then 
@@ -1687,18 +1678,14 @@ local RefreshButton = ESPTab:Button({
 -- ВКЛАДКА AUTOBUY
 -- ============================================
 local AutoBuyTab = Window:Tab({
-    Name = "🛒 AutoBuy",
-    Icon = "rbxassetid://4483362458",
+    Title = "🛒 AutoBuy",
+    Icon = "shopping-cart",
     Color = Color3.fromRGB(0, 255, 100)
 })
 
-local AutoBuySection = AutoBuyTab:Section({
-    Name = "Автоматическая покупка"
-})
-
 local AutoBuyToggle = AutoBuyTab:Toggle({
-    Name = "Включить AutoBuy",
-    Value = autoBuyEnabled,
+    Title = "Включить AutoBuy",
+    Default = autoBuyEnabled,
     Callback = function(Value)
         pcall(function()
             autoBuyEnabled = Value
@@ -1722,10 +1709,11 @@ local AutoBuyToggle = AutoBuyTab:Toggle({
 })
 
 local SpeedSlider = AutoBuyTab:Slider({
-    Name = "Скорость полета",
+    Title = "Скорость полета",
     Min = 50,
     Max = 300,
     Default = autoBuySpeed,
+    Step = 10,
     Callback = function(Value)
         pcall(function()
             autoBuySpeed = Value
@@ -1740,7 +1728,7 @@ local SpeedSlider = AutoBuyTab:Slider({
 })
 
 local ManualBuyButton = AutoBuyTab:Button({
-    Name = "🔄 Выполнить один цикл покупки",
+    Title = "🔄 Выполнить один цикл покупки",
     Callback = function()
         pcall(function()
             if autoBuyEnabled then
@@ -1764,65 +1752,52 @@ local ManualBuyButton = AutoBuyTab:Button({
 })
 
 AutoBuyTab:Label({
-    Text = "ℹ️ Как работает AutoBuy:",
-    Flag = false
+    Title = "ℹ️ Как работает AutoBuy:"
 })
 
 AutoBuyTab:Label({
-    Text = "1. Находит ближайший предмет с ESP",
-    Flag = false
+    Title = "1. Находит ближайший предмет с ESP"
 })
 
 AutoBuyTab:Label({
-    Text = "2. Летит к нему плавно (ULTRA FAST Tween)",
-    Flag = false
+    Title = "2. Летит к нему плавно (ULTRA FAST Tween)"
 })
 
 AutoBuyTab:Label({
-    Text = "3. Кликает по предмету (добавление в корзину)",
-    Flag = false
+    Title = "3. Кликает по предмету (добавление в корзину)"
 })
 
 AutoBuyTab:Label({
-    Text = "4. Находит Seller в том же магазине",
-    Flag = false
+    Title = "4. Находит Seller в том же магазине"
 })
 
 AutoBuyTab:Label({
-    Text = "5. Летит к Seller и кликает (покупка)",
-    Flag = false
+    Title = "5. Летит к Seller и кликает (покупка)"
 })
 
 AutoBuyTab:Label({
-    Text = "🛡️ ОБХОД АНТИЧИТА АКТИВЕН!",
-    Flag = false
+    Title = "🛡️ ОБХОД АНТИЧИТА АКТИВЕН!"
 })
 
 -- ============================================
 -- ВКЛАДКА ВЫБОР ОДЕЖДЫ
 -- ============================================
 local AssetsTab = Window:Tab({
-    Name = "👕 Одежда",
-    Icon = "rbxassetid://4483362458",
+    Title = "👕 Одежда",
+    Icon = "shirt",
     Color = Color3.fromRGB(255, 100, 0)
 })
 
-local AssetsSection = AssetsTab:Section({
-    Name = "Фильтр предметов одежды"
+AssetsTab:Label({
+    Title = "ℹ️ Выберите конкретные предметы для ESP"
 })
 
 AssetsTab:Label({
-    Text = "ℹ️ Выберите конкретные предметы для ESP",
-    Flag = false
-})
-
-AssetsTab:Label({
-    Text = "Если ничего не выбрано - показываются ВСЕ",
-    Flag = false
+    Title = "Если ничего не выбрано - показываются ВСЕ"
 })
 
 local SelectAllAssetsButton = AssetsTab:Button({
-    Name = "✅ Выбрать все предметы",
+    Title = "✅ Выбрать все предметы",
     Callback = function()
         pcall(function()
             selectAllAssets()
@@ -1836,7 +1811,7 @@ local SelectAllAssetsButton = AssetsTab:Button({
 })
 
 local ClearAssetsButton = AssetsTab:Button({
-    Name = "❌ Очистить выбор одежды",
+    Title = "❌ Очистить выбор одежды",
     Callback = function()
         pcall(function()
             selectedAssets = {}
@@ -1859,16 +1834,15 @@ end
 table.sort(topAssets, function(a, b) return a.chance < b.chance end)
 
 AssetsTab:Label({
-    Text = "Топ-20 самых редких предметов:",
-    Flag = false
+    Title = "Топ-20 самых редких предметов:"
 })
 
 for i = 1, math.min(20, #topAssets) do
     local asset = topAssets[i]
     
     AssetsTab:Toggle({
-        Name = string.format("%s (%.3f%%)", asset.name, asset.chance),
-        Value = selectedAssets[asset.id] ~= nil,
+        Title = string.format("%s (%.3f%%)", asset.name, asset.chance),
+        Default = selectedAssets[asset.id] ~= nil,
         Callback = function(Value)
             pcall(function()
                 if Value then
@@ -1891,27 +1865,21 @@ end
 -- ВКЛАДКА ВЫБОР АКСЕССУАРОВ
 -- ============================================
 local AccessoriesTab = Window:Tab({
-    Name = "👜 Аксессуары",
-    Icon = "rbxassetid://4483362458",
+    Title = "👜 Аксессуары",
+    Icon = "bag",
     Color = Color3.fromRGB(255, 0, 150)
 })
 
-local AccessoriesSection = AccessoriesTab:Section({
-    Name = "Фильтр аксессуаров"
+AccessoriesTab:Label({
+    Title = "ℹ️ Выберите конкретные аксессуары для ESP"
 })
 
 AccessoriesTab:Label({
-    Text = "ℹ️ Выберите конкретные аксессуары для ESP",
-    Flag = false
-})
-
-AccessoriesTab:Label({
-    Text = "Если ничего не выбрано - показываются ВСЕ",
-    Flag = false
+    Title = "Если ничего не выбрано - показываются ВСЕ"
 })
 
 local SelectAllAccessoriesButton = AccessoriesTab:Button({
-    Name = "✅ Выбрать все аксессуары",
+    Title = "✅ Выбрать все аксессуары",
     Callback = function()
         pcall(function()
             selectAllAccessories()
@@ -1925,7 +1893,7 @@ local SelectAllAccessoriesButton = AccessoriesTab:Button({
 })
 
 local ClearAccessoriesButton = AccessoriesTab:Button({
-    Name = "❌ Очистить выбор аксессуаров",
+    Title = "❌ Очистить выбор аксессуаров",
     Callback = function()
         pcall(function()
             selectedAccessories = {}
@@ -1948,16 +1916,15 @@ end
 table.sort(topAccessories, function(a, b) return a.chance < b.chance end)
 
 AccessoriesTab:Label({
-    Text = "Топ-20 самых редких аксессуаров:",
-    Flag = false
+    Title = "Топ-20 самых редких аксессуаров:"
 })
 
 for i = 1, math.min(20, #topAccessories) do
     local accessory = topAccessories[i]
     
     AccessoriesTab:Toggle({
-        Name = string.format("%s (%.3f%%)", accessory.name, accessory.chance),
-        Value = selectedAccessories[accessory.id] ~= nil,
+        Title = string.format("%s (%.3f%%)", accessory.name, accessory.chance),
+        Default = selectedAccessories[accessory.id] ~= nil,
         Callback = function(Value)
             pcall(function()
                 if Value then
@@ -1980,43 +1947,33 @@ end
 -- ВКЛАДКА СТАТИСТИКА
 -- ============================================
 local StatsTab = Window:Tab({
-    Name = "📊 Статистика",
-    Icon = "rbxassetid://4483362458",
+    Title = "📊 Статистика",
+    Icon = "bar-chart",
     Color = Color3.fromRGB(100, 200, 255)
 })
 
-local StatsSection = StatsTab:Section({
-    Name = "Информация"
-})
-
 local ItemCountLabel = StatsTab:Label({
-    Text = "Предметов в базе: Загрузка...",
-    Flag = "ItemCount"
+    Title = "Предметов в базе: Загрузка..."
 })
 
 local AccessoryCountLabel = StatsTab:Label({
-    Text = "Аксессуаров в базе: Загрузка...",
-    Flag = "AccessoryCount"
+    Title = "Аксессуаров в базе: Загрузка..."
 })
 
 local FoundItemsLabel = StatsTab:Label({
-    Text = "Найдено предметов: 0",
-    Flag = "FoundItems"
+    Title = "Найдено предметов: 0"
 })
 
 local BoughtItemsLabel = StatsTab:Label({
-    Text = "Куплено предметов: 0",
-    Flag = "BoughtItems"
+    Title = "Куплено предметов: 0"
 })
 
 local SelectedAssetsLabel = StatsTab:Label({
-    Text = "Выбрано предметов: 0",
-    Flag = "SelectedAssets"
+    Title = "Выбрано предметов: 0"
 })
 
 local SelectedAccessoriesLabel = StatsTab:Label({
-    Text = "Выбрано аксессуаров: 0",
-    Flag = "SelectedAccessories"
+    Title = "Выбрано аксессуаров: 0"
 })
 
 -- Обновление статистики
@@ -2061,32 +2018,25 @@ end)
 -- ВКЛАДКА КОНФИГ
 -- ============================================
 local ConfigTab = Window:Tab({
-    Name = "⚙️ Конфиг",
-    Icon = "rbxassetid://4483362458",
+    Title = "⚙️ Конфиг",
+    Icon = "settings",
     Color = Color3.fromRGB(150, 150, 150)
 })
 
-local ConfigSection = ConfigTab:Section({
-    Name = "Управление конфигурацией"
+ConfigTab:Label({
+    Title = "ℹ️ Автосохранение включено"
 })
 
 ConfigTab:Label({
-    Text = "ℹ️ Автосохранение включено",
-    Flag = false
+    Title = "Все настройки автоматически сохраняются"
 })
 
 ConfigTab:Label({
-    Text = "Все настройки автоматически сохраняются",
-    Flag = false
-})
-
-ConfigTab:Label({
-    Text = "Конфиг загружается при запуске скрипта",
-    Flag = false
+    Title = "Конфиг загружается при запуске скрипта"
 })
 
 local SaveConfigButton = ConfigTab:Button({
-    Name = "💾 Сохранить конфиг вручную",
+    Title = "💾 Сохранить конфиг вручную",
     Callback = function()
         pcall(function()
             saveConfig()
@@ -2100,7 +2050,7 @@ local SaveConfigButton = ConfigTab:Button({
 })
 
 local LoadConfigButton = ConfigTab:Button({
-    Name = "📂 Перезагрузить конфиг",
+    Title = "📂 Перезагрузить конфиг",
     Callback = function()
         pcall(function()
             loadConfig()
@@ -2114,7 +2064,7 @@ local LoadConfigButton = ConfigTab:Button({
 })
 
 local ResetConfigButton = ConfigTab:Button({
-    Name = "🗑️ Сбросить все настройки",
+    Title = "🗑️ Сбросить все настройки",
     Callback = function()
         pcall(function()
             selectedAssets = {}
@@ -2137,76 +2087,61 @@ local ResetConfigButton = ConfigTab:Button({
 -- ВКЛАДКА О СКРИПТЕ
 -- ============================================
 local AboutTab = Window:Tab({
-    Name = "ℹ️ О скрипте",
-    Icon = "rbxassetid://4483362458",
+    Title = "ℹ️ О скрипте",
+    Icon = "info",
     Color = Color3.fromRGB(150, 100, 255)
 })
 
-local AboutSection = AboutTab:Section({
-    Name = "Информация"
+AboutTab:Label({
+    Title = "🎯 Firma Mode Hub ESP + AutoBuy"
 })
 
 AboutTab:Label({
-    Text = "🎯 Firma Mode Hub ESP + AutoBuy",
-    Flag = false
-})
-
-AboutTab:Label({
-    Text = "Скрипт для поиска и автопокупки редких вещей",
-    Flag = false
+    Title = "Скрипт для поиска и автопокупки редких вещей"
 })
 
 AboutTab:Divider()
 
 AboutTab:Label({
-    Text = "✨ ФУНКЦИИ:",
-    Flag = false
+    Title = "✨ ФУНКЦИИ:"
 })
 
 AboutTab:Label({
-    Text = "• 🛡️ Обход античита для телепорта",
-    Flag = false
+    Title = "• 🛡️ Обход античита для телепорта"
 })
 
 AboutTab:Label({
-    Text = "• 🚀 ULTRA FAST твин телепорт (до 300 м/с)",
-    Flag = false
+    Title = "• 🚀 ULTRA FAST твин телепорт (до 300 м/с)"
 })
 
 AboutTab:Label({
-    Text = "• 👕 Выбор конкретных предметов одежды",
-    Flag = false
+    Title = "• 👕 Выбор конкретных предметов одежды"
 })
 
 AboutTab:Label({
-    Text = "• 👜 Выбор конкретных аксессуаров",
-    Flag = false
+    Title = "• 👜 Выбор конкретных аксессуаров"
 })
 
 AboutTab:Label({
-    Text = "• 💾 Автосохранение конфигурации",
-    Flag = false
+    Title = "• 💾 Автосохранение конфигурации"
 })
 
 AboutTab:Label({
-    Text = "• 🎨 Интерфейс WindUI",
-    Flag = false
+    Title = "• 🎨 Интерфейс WindUI"
 })
 
 AboutTab:Divider()
 
 AboutTab:Label({
-    Text = "📱 Telegram: @FirmaModeHub",
-    Flag = false
+    Title = "📱 Telegram: @FirmaModeHub"
 })
 
 AboutTab:Label({
-    Text = "🔧 Версия: 3.0 ULTRA (WindUI)",
-    Flag = false
+    Title = "🔧 Версия: 3.0 ULTRA (WindUI)"
 })
 
 AboutTab:Button({
-    Name = "📋 Копировать Telegram",
+    Title = "📋 Копировать Telegram",
     Callback = function()
         pcall(function()
             setclipboard("@FirmaModeHub")
