@@ -1465,11 +1465,6 @@ local Window = WindUI:CreateWindow({
     Author = "@FirmaModeHub",
     Folder = "FirmaESP",
     Size = UDim2.fromOffset(580, 460),
-    KeySystem = {
-        Key = "free",
-        SaveKey = true,
-        Note = "Нажмите Submit без ключа"
-    },
     Transparent = true,
     Theme = "Dark",
     SideBarWidth = 170,
